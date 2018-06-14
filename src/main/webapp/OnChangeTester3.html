@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<!--
+-->
+<html>
+    <head>
+        <title>TODO supply a title</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </head>
+    <body>
+        <div>Onchange test</div>
+        <div id="container"></div>
+        
+        <script>
+            var div = document.getElementById("container");
+            var fragment = document.createDocumentFragment();
+
+            var eld = document.createElement('input');
+            eld.id = "datetime";
+            eld.type = "date";
+            eld.value= "1900-12-01"
+            eld.onchange = function(){alert(this.value);};
+            fragment.appendChild(eld);
+            
+            var elt = document.createElement('input');
+            elt.id = "time";
+            elt.type = "time";
+            elt.value= "23:59"
+            elt.onchange = function(){alert(this.value);};
+            fragment.appendChild(elt);
+
+            div.appendChild(fragment);
+            
+            console.log(Intl.DateTimeFormat().resolvedOptions().timeZone);
+        </script>
+    </body>
+</html>

@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<!--
+To change this license header, choose License Headers in Project Properties.
+To change this template file, choose Tools | Templates
+and open the template in the editor.
+-->
+<html>
+    <head>
+        <title>Div Overlap</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+            #LargeDate {
+                display: grid;
+                grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
+                grid-template-rows: 1fr 1fr 1fr 1fr 1fr;
+            }
+            .vbigdate {
+                font-family: Helvetica;
+                font-size: 3000%;
+            }
+            #day0 {
+                color: #ffff80;
+                grid-row: 1 / span 4;
+                  grid-row-start: 1;
+                  grid-row-end: span 4;
+                grid-column: 1 / span 4;
+                  grid-column-start: 1;
+                  grid-column-end: span 4;
+            }
+            #day1 {
+                color: #e6e600;
+                grid-row: 2 / span 4;
+                  grid-row-start: 2;
+                  grid-row-end: span 4;
+                grid-column: 2 / span 4;
+                  grid-column-start: 2;
+                  grid-column-end: span 4;
+            }
+        </style>
+    </head>
+    <body>
+        <h2>Large Date</h2>
+        <div id="LargeDate">
+            <div id="day0" class="vbigdate">2</div>
+            <div id="day1" class="vbigdate">5</div>
+        </div>
+    </body>
+</html>
