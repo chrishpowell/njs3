@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<!--
+AstroLayout 1
+-->
+<html>
+    <head>
+        <title>Predikt Layout 1</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+            #homepage {
+                display: grid;
+                grid-template-columns: 30px 30px 300px 1fr 300px 350px;
+                grid-template-rows: minmax(max-content, 30px) 1fr 1fr 1fr 10px;
+            }
+            #logo {
+                padding-bottom: 5px;
+            }
+            #company {
+                grid-column: 1;
+                writing-mode: vertical-rl;
+                transform: rotate(180deg);
+                font-family: Helvetica;
+                font-size: 30px;
+                text-align: right;
+                line-height: 75%;
+                border-left: thin solid black; 
+            }
+            .top2bottom-grad {
+                border-width: 0 0 1px 0;
+                border-style: solid;
+                border-image: linear-gradient(to bottom, black, rgba(0, 0, 0, 0)) 1 100%;
+            }
+            #whitespace {
+                grid-column: 2
+            }
+            #nav {
+                grid-column: 3;
+                background: lightskyblue;
+                padding-left: 10px; padding-right: 10px;
+            }
+            #content {
+                grid-column: 4;
+                background: lavender;
+                padding-left: 10px; padding-right: 10px;
+            }
+            #dynamic {
+                grid-column: 5;
+                background: lightcyan;
+                padding-left: 10px; padding-right: 10px;
+            }
+            #date {
+                grid-column: 6;
+            }
+
+            #datecontainer {
+                grid-row: 3 / span 2;
+                grid-row-start: 3;
+                grid-row-end: span 2;
+            }
+            #large-date {
+                display: grid;
+                grid-template-columns: 1fr 1fr 1fr;
+                grid-template-rows: 1fr 1fr 1fr;
+                max-width: 150px;
+                max-height: 300px;
+            }
+            .vbigdate {
+                font-family: Helvetica;
+                font-size: 2500%;
+                margin-bottom: -10px;
+                line-height: 75%
+            }
+            #day0 {
+                grid-row: 1 / span 2;
+                grid-row-start: 1;
+                grid-row-end: span 2;
+                grid-column: 1 / span 2;
+                grid-column-start: 1;
+                grid-column-end: span 2;
+            }
+            #day1 {
+                grid-row: 2 / span 2;
+                grid-row-start: 2;
+                grid-row-end: span 2;
+                grid-column: 2 / span 2;
+                grid-column-start: 2;
+                grid-column-end: span 2;
+            }
+            #inner-grid0 {
+                display: grid;
+                grid-template-columns: 1fr;
+                grid-template-rows: 1fr 45px;
+            }
+            #inner-grid1 {
+                display: grid;
+                grid-template-columns: 1fr;
+                grid-template-rows: 20px 1fr;
+            }
+            #head0 {
+                color: #ffff80;
+                grid-row: 1;
+                grid-column: 1;
+            }
+            #foot0 {
+                font-family: Helvetica;
+                font-size: 25px;
+                line-height: 25px;
+                text-align: justify;
+                text-justify: inter-word;
+                grid-row: 2;
+                grid-column: 1;
+                z-index: 2;
+            }
+            #head1 {
+                font-family: Helvetica;
+                font-size: 22px;
+                text-align: right;
+                grid-row: 1;
+                grid-column: 1;
+                z-index: 2;
+            }
+            #foot1 {
+                color: #e6e600;
+                grid-row: 2;
+                grid-column: 1;
+            }
+        </style>
+    </head>
+    <body style="margin: 30px;">
+        <div id="homepage">
+            <div id="logo"><img src="../images/logo-beta2.png" alt /></div>
+            <div id="company" class="top2bottom-grad">Predikt.io</div>
+            <div id="nav">Nav</div>
+            <div id="content">Content</div>
+            <div id="dynamic">Dynamic</div>
+            <div id="date">
+                <div id="datecontainer">
+                    <div id="large-date">
+                        <div id="day0">
+                            <div id="inner-grid0">
+                                <div id="head0" class="vbigdate">2</div>
+                                <div id="foot0">Moon in conjunction with Pluto 11:37pm [intense emotions and feeling to others or from others]</div>
+                            </div>
+                        </div>
+                        <div id="day1">
+                            <div id="inner-grid1">
+                                <div id="head1">MARCH 2018</div>
+                                <div id="foot1" class="vbigdate">5</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <script>
+            Date.prototype.getMonthName = function (lang)
+            {
+                // Default language is English
+                lang = lang || 'en-GB';
+                return this.toLocaleString(lang, {month: 'long'});
+            }
+
+            function separateNumberIntoUnits(n)
+            {
+                if (n == 0)
+                    return [0];
+
+                var arr = [];
+                var i = 1;
+
+                while (n > 0)
+                {
+                    arr.unshift((n % 10) * i);
+                    n = Math.floor(n / 10);
+                    i *= 10
+                }
+
+                return arr;
+            }
+
+            var dateObj = new Date();
+            var day = dateObj.getDate();
+            var dayarr = separateNumberIntoUnits(day);
+            var month = dateObj.getMonthName();
+            var year = dateObj.getFullYear();
+
+            document.getElementById("head0").innerHTML = day < 10 ? "0" : dayarr[0];
+            document.getElementById("foot1").innerHTML = day < 10 ? dayarr[0] : dayarr[1];
+            document.getElementById("head1").innerHTML = month.toUpperCase() + " " + year;
+        </script>
+    </body>
+</html>

@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<!--
+To change this license header, choose License Headers in Project Properties.
+To change this template file, choose Tools | Templates
+and open the template in the editor.
+-->
+<html>
+    <head>
+        <title>Div Overlap</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+            #large-date {
+                display: grid;
+                grid-template-columns: 1fr 1fr 1fr;
+                grid-template-rows: 1fr 1fr 1fr;
+                max-width: 150px;
+                max-height: 300px;
+            }
+            .vbigdate {
+                font-family: Helvetica;
+                font-size: 3000%;
+                margin-bottom: -10px;
+                line-height: 75%
+            }
+            #day0 {
+                grid-row: 1 / span 2;
+                grid-row-start: 1;
+                grid-row-end: span 2;
+                grid-column: 1 / span 2;
+                grid-column-start: 1;
+                grid-column-end: span 2;
+            }
+            #day1 {
+                grid-row: 2 / span 2;
+                grid-row-start: 2;
+                grid-row-end: span 2;
+                grid-column: 2 / span 2;
+                grid-column-start: 2;
+                grid-column-end: span 2;
+            }
+            #inner-grid0 {
+                display: grid;
+                grid-template-columns: 1fr;
+                grid-template-rows: 1fr 45px;
+            }
+            #inner-grid1 {
+                display: grid;
+                grid-template-columns: 1fr;
+                grid-template-rows: 20px 1fr;
+            }
+            #head0 {
+                color: #ffff80;
+                grid-row: 1;
+                grid-column: 1;
+            }
+            #foot0 {
+                font-family: Helvetica;
+                font-size: 45px;
+                line-height: 45px;
+                text-align: center;
+                grid-row: 2;
+                grid-column: 1;
+                z-index: 2;
+            }
+            #head1 {
+                font-family: Helvetica;
+                font-size: 22px;
+                text-align: right;
+                grid-row: 1;
+                grid-column: 1;
+                z-index: 2;
+            }
+            #foot1 {
+                color: #e6e600;
+                grid-row: 2;
+                grid-column: 1;
+            }
+        </style>
+    </head>
+    <body>
+        <h2>Large Date</h2>
+        <div id="large-date">
+            <div id="day0">
+                <div id="inner-grid0">
+                    <div id="head0" class="vbigdate">2</div>
+                    <div id="foot0">Predikt.io</div>
+                </div>
+            </div>
+            <div id="day1">
+                <div id="inner-grid1">
+                    <div id="head1">MARCH 2018</div>
+                    <div id="foot1" class="vbigdate">5</div>
+                </div>
+            </div>
+        </div>
+        <script>
+            Date.prototype.getMonthName = function (lang)
+            {
+                // Default language is English
+                lang = lang || 'en-GB';
+                return this.toLocaleString(lang, {month: 'long'});
+            }
+
+            function separateNumberIntoUnits(n)
+            {
+                if (n == 0)
+                    return [0];
+
+                var arr = [];
+                var i = 1;
+
+                while (n > 0)
+                {
+                    arr.unshift((n % 10) * i);
+                    n = Math.floor(n / 10);
+                    i *= 10
+                }
+
+                return arr;
+            }
+
+            var dateObj = new Date();
+            var day = dateObj.getUTCDate();
+            var dayarr = separateNumberIntoUnits(day);
+            var month = dateObj.getMonthName();
+            var year = dateObj.getUTCFullYear();
+
+            document.getElementById("head0").innerHTML = day < 10 ? "0" : dayarr[0];
+            document.getElementById("foot1").innerHTML = day < 10 ? dayarr[0] : dayarr[1];
+            document.getElementById("head1").innerHTML = month.toUpperCase() + " " + year;
+        </script>
+    </body>
+</html>

@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<!--
+-->
+<html>
+    <head>
+        <title>TDateTime-picker</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link rel="stylesheet" href="../css/datetime.css">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+        <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+        <script src="https://npmcdn.com/flatpickr/dist/l10n/fr.js"></script>
+        <script src="../js/datetime.js"></script>
+    </head>
+    <body style="font-family:Lucida Console">
+        <div>Onchange test 5</div>
+        <div id="tz">Timezone...</div>
+        <div id="container">
+            <div class="input-div" id="dtinput-div"></div>
+            <div id="arrows-div">
+                <div class="arrows-div" id="darrows-div">
+                    <div class="header-txt">One day</div>
+                    <div class="arrows">
+                        <div class="inner-arrow">
+                            <p class="arrow" onclick="dtOneDayLess();">&#x21E6;</p>
+                        </div>
+                        <div class="inner-arrow">
+                            <p class="arrow" onclick="dtOneDayMore();">&#x21E8;</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="arrows-div" id="tarrows-div">
+                    <div class="header-txt">One hour</div>
+                    <div class="arrows">
+                        <div class="inner-arrow">
+                            <p class="arrow" onclick="dtOneHrLess();">&#x21E6;</p>
+                        </div>
+                        <div class="inner-arrow">
+                            <p class="arrow" onclick="dtOneHrMore();">&#x21E8;</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            // Store date and time
+            var date, time;
+            // Date current TZ offset
+            var offset = new Date().getTimezoneOffset();
+            // Tell 'em TZ
+            document.getElementById("tz").innerHTML = "Your timezone is: " + Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+            // Create new div
+            var div = document.getElementById("dtinput-div");
+
+            // Create the fragment
+            var fragment = document.createDocumentFragment();
+
+            // Datetime input
+            var eldt = document.createElement("input");
+
+            // Datetime picker setup
+            eldt.id = "datetimepick";
+            eldt.style.fontFamily = "Lucida Console";
+            eldt.style.border = "none";
+            eldt.style.paddingLeft = "3px";
+
+            // See output
+            eldt.onchange = function () {
+                date = this.value;
+                alert(this.value);
+            };
+
+            // Complete fragment
+            fragment.appendChild(eldt);
+            div.appendChild(fragment);  // Attach to container div
+
+            // Initialise (make sure DOM has been updated first!)  defaultHour:23, defaultMinute:59,
+            flatpickr(eldt, {locale: "fr", defaultDate: "01-Jan-1999 23:59", dateFormat: "j-M-Y H:i", enableTime: true, time_24hr: true, timeFormat: "H:i"});
+        </script>
+    </body>
+</html>

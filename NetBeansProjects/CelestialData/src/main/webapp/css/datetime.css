@@ -1,0 +1,54 @@
+/* 
+Datetime css
+    Created on : 28-May-2018, 22:27:53
+    Author     : chris
+*/
+.div {
+    border: none;
+    margin: 0; padding: 0;
+}
+/* Overall container */
+#container {
+    width: 450px;
+    height: 35px;
+    font-size: 12px;
+    vertical-align: middle;
+    border: thin solid darkgrey;
+    display: block;
+}
+/* input-div:arrow-div and left-arrow:right-arrow side by side */
+.input-div, .arrows-div, .inner-arrow {
+    display: table-cell;
+    vertical-align: middle;
+}
+/* Input (datetime pick), arrows: 50/50 */
+#dtinput-div, #arrows-div {
+    width: 50%;
+    height: 35px;
+}
+#darrows-div {
+    width: 40%;
+    height: 35px;
+}
+#tarrows-div {
+    width: 50%;
+    height: 35px;
+}
+.header-txt {
+    vertical-align: middle;
+    text-align: center;
+}
+.arrows {
+    font-size: 24px;
+    text-align: center;
+    width: 50%;
+    height:25px;
+    float: left;
+    display: inline;
+}
+.arrow {
+    height: 25px;
+    margin: 0; padding: 0;
+    vertical-align:top;
+    cursor: pointer;
+}
