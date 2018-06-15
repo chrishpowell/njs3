@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<!--
+Copyright (C) 2018 chris
+
+-->
+<html>
+    <head>
+        <title>PlotXYTest</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <script src="http://localhost:8080/AstroData-1.0-SNAPSHOT/js/xy.min.js"></script>
+        <!-- <script src="http://localhost:8080/AstroData/js/transform.min.js"></script> -->
+    </head>
+    <body>
+        <h2>Plotting</h2>
+        <canvas id="canvas" width="400" height="200"></canvas>
+        <script>
+//            var datasets = [
+//                            {
+//                              lineColor : 'rgba(220,220,220,0.5)',
+//                              lineWidth: 0.5,
+//                              pointColor : 'rgba(220,220,220,1)',
+//                              pointStrokeColor : '#fff',
+//                              data : [[2.5, 4, 0.1, '#c00','a-1',true], [3, 4,0.1, '#ccc','a-2',false], [2.5,6,0.1, '#ccc','a-3',false], [1.5, 4,0.1, '#ccc','a-4',false]]
+//                            },
+//                            {
+//                              lineColor : 'rgba(151,187,205,0.5)',
+//                              lineWidth: 0.5,
+//                              pointCircleRadius: 1,
+//                              pointColor : 'rgba(151,187,205,1)',
+//                              pointStrokeColor : '#fff',
+//                              pointStrokeWidth: 1,
+//                              data : [[4.25,4.75], [4.2,2.8], [5.25, 3.5], [5.5, 2], [7, 2.1]]
+//                            }
+//                          ];
+                var datasets = [
+                            {
+                              lineColor : 'rgba(220,220,220,0.5)',
+                              lineWidth: 0.5,
+                              pointColor : 'rgba(220,220,220,1)',
+                              pointStrokeColor : '#fff',
+                              data : [
+                                  {x:2.5, y:4, r:0.1, color:'#c00', name:'a-1', displayName:true},
+                                  {x:3, y:4, r:0.1, color:'#ccc', name:'a-2', displayName:false},
+                                  {x:2.5, y:6, r:0.1, color:'#ccc', name:'a-3', displayName:false},
+                                  {x:1.5, y:4, r:0.1, color:'#ccc', name:'a-4', displayName:false}
+                              ]
+                            },
+                            {
+                              lineColor : 'rgba(151,187,205,0.5)',
+                              lineWidth: 0.5,
+                              pointCircleRadius: 1,
+                              pointColor : 'rgba(151,187,205,1)',
+                              pointStrokeColor : '#fff',
+                              pointStrokeWidth: 1,
+                              data : [
+                                  {x:4.25, y:4.75, r:0.1, color:'#c00', name:'b-1', displayName:true},
+                                  {x:4.2, y:2.8, r:0.1, color:'#c00', name:'b-2', displayName:false},
+                                  {x:5.25, y:3.5, r:0.1, color:'#c00', name:'b-3', displayName:false},
+                                  {x:5.5, y:2, r:0.1, color:'#c00', name:'b-4', displayName:false},
+                                  {x:7, y:2.1, r:0.1, color:'#c00', name:'b-5', displayName:false}
+                               ]
+                            }
+                          ];
+                          
+            var ctx = document.getElementById('canvas').getContext('2d');
+            var xy = new Xy(ctx,{ smooth:false, scale:false, label:false });
+            //
+            //// Override the `plot`.
+            xy.plot = function(datasets) {
+              var ctx = this.ctx;
+              ctx.textBaseline = 'middle';
+              ctx.textAlign = 'right';
+
+              for (var i = 0; i < datasets.length; i++)
+              {
+                var data = datasets[i].data;
+                ctx.strokeStyle = datasets[i].pointStrokeColor;
+                
+                console.log( "data.length: " + data.length);
+                for (var j = 0; j < data.length; j++)
+                {
+                    console.log("data x: " +data[j].x)
+                  ctx.fillStyle = data[j].color;
+
+                  ctx.beginPath();
+                  ctx.xywhr.arc(data[j].x, data[j].y, data[j].r, 0, Math.PI * 2);
+                  ctx.fill();
+                  ctx.stroke();
+                  
+                  ctx.xy.fillText((data[j].displayName?data[j].name:""),data[j].x,data[j].y);
+                }
+            }
+        };
+        xy.draw(datasets);
+        </script>
+    </body>
+</html>

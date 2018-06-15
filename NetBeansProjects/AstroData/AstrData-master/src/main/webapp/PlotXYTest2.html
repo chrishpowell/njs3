@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<!--
+Copyright (C) 2018 chris
+
+-->
+<html>
+    <head>
+        <title>PlotXYTest2</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <script src="http://localhost:8080/AstroData-1.0-SNAPSHOT/js/xy.min.js"></script>
+    </head>
+    <body>
+        <h2>Plotting2</h2>
+        <canvas id="canvas" width="400" height="200"></canvas>
+        <script>
+            fetch('http://localhost:8080/AstroData-1.0-SNAPSHOT/bodiesXY')
+                .then(resp => resp.json()) 
+                .then(datasets => {
+                    var ctx = document.getElementById('canvas').getContext('2d');
+                    var xy = new Xy(ctx,{ smooth:false, scale:false, label:false });
+                    
+                    //// Override the `plot`.
+                    xy.plot = function(datasets)
+                    {
+                      var ctx = this.ctx;
+                      ctx.textBaseline = 'middle';
+                      ctx.textAlign = 'right';
+
+                      for (var i = 0; i < datasets.length; i++)
+                      {
+                        var data = datasets[i].data;
+                        ctx.strokeStyle = datasets[i].pointStrokeColor;
+
+                        for (var j = 0; j < data.length; j++)
+                        {
+                          ctx.fillStyle = data[j][3];
+
+                          ctx.beginPath();
+                          ctx.xywhr.arc(data[j][0], data[j][1], data[j][2], 0, Math.PI * 2);
+                          ctx.fill();
+                          ctx.stroke();
+
+                          ctx.xy.fillText((data[j][5]?data[j][4]:""),data[j][0],data[j][1]);
+                        }
+                      }
+                    };
+            xy.draw(datasets);
+//        })
+//           .catch(err => {
+//               console.err('Error..> ', err);
+        });
+        </script>
+    </body>
+</html>

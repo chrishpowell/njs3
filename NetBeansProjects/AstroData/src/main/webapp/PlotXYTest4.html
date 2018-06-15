@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<!--
+Copyright (C) 2018 chris
+
+-->
+<html>
+    <head>
+        <title>PlotXYTest</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <script src="http://localhost:8080/AstroData-1.0-SNAPSHOT/js/xy.min.js"></script>
+        <!-- <script src="http://localhost:8080/AstroData/js/transform.min.js"></script> -->
+    </head>
+    <body>
+        <h2>Plotting</h2>
+        <canvas id="canvas" height="400" width="800" style="border:1px solid #000000;"></canvas>
+        <script>
+            var datasets = [
+                        {
+                          lineColor : 'lightblue',
+                          lineWidth: 0.5,
+                          data : [
+                              {x:2.5, y:4, r:0.1, color:'red', name:'a-1', displayName:true},
+                              {x:3, y:4, r:0.1, color:'white', name:'a-2', displayName:false},
+                              {x:2.5, y:6, r:0.1, color:'white', name:'a-3', displayName:false},
+                              {x:1.5, y:4, r:0.1, color:'white', name:'a-4', displayName:false}
+                          ]
+                        },
+                        {
+                          lineColor : 'lightblue',
+                          lineWidth: 0.5,
+                          data : [
+                              {x:4.25, y:4.75, r:0.1, color:'green', name:'b-1', displayName:true},
+                              {x:4.2, y:2.8, r:0.1, color:'white', name:'b-2', displayName:false},
+                              {x:5.25, y:3.5, r:0.1, color:'white', name:'b-3', displayName:false},
+                              {x:5.5, y:2, r:0.1, color:'white', name:'b-4', displayName:false},
+                              {x:7, y:2.1, r:0.1, color:'red', name:'b-5', displayName:false}
+                           ]
+                        }
+                      ];
+                          
+            var ctx = document.getElementById('canvas').getContext('2d');
+            // Canvas background
+            ctx.clearRect(0, 0, window.innerWidth,window.innerHeight);
+            var grd=ctx.createLinearGradient(400,0,400,775);
+            grd.addColorStop(0,"midnightblue");
+            grd.addColorStop(1,"lightblue");
+            ctx.fillStyle = grd;
+            ctx.fillRect(0,0,window.innerWidth,window.innerHeight);
+            
+            // Scale (to see)
+            ctx.scale(20,20);
+            ctx.lineWidth = 0.05;
+            ctx.font = '0.5px Arial';
+
+            // Where text aligns
+            ctx.textBaseline = 'middle';
+            ctx.textAlign = 'right';
+
+            // Get the data and display
+            for (var i = 0; i < datasets.length; i++)
+            {
+              var data = datasets[i].data;
+
+              console.log( "data.length: " + data.length);
+              for (var j = 0; j < data.length-1; j++)
+              {
+                // Lines
+                ctx.beginPath();
+                ctx.moveTo(data[j].x,10-data[j].y);
+                ctx.lineTo(data[j+1].x,10-data[j+1].y);
+                ctx.strokeStyle = datasets[i].lineColor;
+                ctx.stroke();
+                
+                // Nodes (after line so on top)
+                ctx.beginPath();
+                ctx.arc(data[j].x, 10-data[j].y, data[j].r, 0, Math.PI * 2);
+                ctx.fillStyle = data[j].color;
+                ctx.fill();
+                ctx.strokeStyle = data[j].color;
+                ctx.stroke();
+                
+                ctx.fillStyle = 'lightgrey';
+                ctx.fillText((data[j].displayName?data[j].name:""),data[j].x,data[j].y);
+              }
+              var lastPoint = data.length-1;
+              ctx.beginPath();
+              ctx.arc(data[lastPoint].x, 10-data[lastPoint].y, data[lastPoint].r, 0, Math.PI * 2);
+              ctx.fillStyle = data[lastPoint].color;
+              ctx.fill();
+              ctx.strokeStyle = data[lastPoint].color;
+              ctx.stroke();
+              
+              ctx.fillStyle = 'lightgrey';
+              ctx.fillText((data[lastPoint].displayName?data[lastPoint].name:""),data[lastPoint].x,data[lastPoint].y);
+          }
+
+        </script>
+    </body>
+</html>

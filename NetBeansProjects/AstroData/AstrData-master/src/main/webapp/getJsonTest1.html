@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<!--
+Copyright (C) 2018 Chris Powell, Discoveri OU
+-->
+<html>
+<head>
+    <title>Star Chart</title>
+    <style>
+        body {
+            font-family: Arial;
+        }
+        h1, h2 {
+            text-align: center;
+        }
+        .container {
+            width: 1200px;
+            height: 750px;
+            border: solid 1px #CCC;
+            margin: auto;
+            background: midnightblue;
+            -webkit-perspective: 600px;
+            perspective: 600px;
+        }
+        .sky {
+            width: 100%;
+            height: 100%;
+            -webkit-transform-style: preserve-3d;
+            transform-style:preserve-3d;
+            -webkit-transform: translate3d(500px,250px,0);
+            transform: translate3d(500px,250px,0);
+            -webkit-transform-origin: 0% 0%;
+            transform-origin: 0% 0%;
+            -webkit-transition: -webkit-transform 4s;
+            transition: transform 4s;
+        }
+        .star {
+            width: 30px;
+            height: 30px;
+            /*background-color: yellow;*/
+            position: absolute;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+            background-image:url('images/circle-blue-30x30.png');
+            background-repeat:no-repeat;
+            background-position:center;
+            cursor:pointer;
+            color:white;
+            text-align:center;
+        }
+    </style>
+</head>
+<body>
+<h1>Predikt.io</h1>
+<div class="container">
+    <div id="sky" class="sky">
+    </div>
+</div>
+
+<script>
+    var sky = document.getElementById("sky");
+    var pogsonsRatio = 2.512; // 5th root of 100 see http://en.wikipedia.org/wiki/Apparent_magnitude
+    var centerStarOnClick = function(starEl,star){
+        starEl.onclick = function(){
+            sky.style.webkitTransform =
+              sky.style.transform = "translate3d(500px,250px,0) rotateX(" + star.declination + "deg) rotateY("
+                    +(-parseFloat(star.rightAscension)*15) + "deg)";
+        };
+    };
+
+    fetch('http://localhost:8080/AstroData/bodies')
+        .then(resp => resp.json()) 
+        .then(starTable => {
+            starTable.forEach( function(star)
+            {
+                var azimuth = parseFloat(star.rightAscension)*15; // convert hour angle to degrees
+                var starEl = document.createElement("div");
+                starEl.className = "star";
+                starEl.innerHTML = star.properName;
+
+                if( star.colorIndex < -0.15 ) { starEl.style.backgroundImage = "url('images/circle-blue-30x30.png')"; }
+                else if( star.colorIndex < 0.15 ) { starEl.style.backgroundImage = "url('images/circle-white-30x30.png')"; }
+                else if( star.colorIndex < 0.85 ) { starEl.style.backgroundImage = "url('images/circle-yellow-30x30.png')"; }
+                else if( star.colorIndex < 1.25 ) { starEl.style.backgroundImage = "url('images/circle-orange-30x30.png')"; }
+                else if( star.colorIndex < 99.0 ) { starEl.style.backgroundImage = "url('images/circle-red-30x30.png')"; }
+                else {
+                    if( star.properName == "Sun" ) { starEl.style.backgroundImage = "url('images/30px-Sun_symbol.svg.png')"; }
+                    else if( star.properName == "Luna" ) { starEl.style.backgroundImage = "url('images/30px-Moon_symbol_crescent.svg.png')"; }
+                    else if( star.properName == "Mercury" ) { starEl.style.backgroundImage = "url('images/30px-Mercury_symbol.svg.png')"; }
+                    else if( star.properName == "Venus" ) { starEl.style.backgroundImage = "url('images/25px-Venus_symbol.svg.png')"; }
+                    else if( star.properName == "Mars" ) { starEl.style.backgroundImage = "url('images/25px-Mars_symbol.svg.png')"; }
+                    else if( star.properName == "Jupiter" ) { starEl.style.backgroundImage = "url('images/25px-Jupiter_symbol.svg.png')"; }
+                    else if( star.properName == "Saturn" ) { starEl.style.backgroundImage = "url('images/25px-Saturn_symbol.svg.png')"; }
+                    else if( star.properName == "Uranus" ) { starEl.style.backgroundImage = "url('images/25px-Uranus_symbol.svg.png')"; }
+                    else if( star.properName == "Neptune" ) { starEl.style.backgroundImage = "url('images/25px-Neptune_symbol.svg.png')"; }
+                    else if( star.properName == "Pluto" ) { starEl.style.backgroundImage = "url('images/25px-Pluto_symbol.svg.png')"; }
+                }
+
+                //starEl.style.webkitTransform = "translate3d(" + star.x + "px," + star.y + "px," + star.z + "px)";
+                var scaleForMagnitude = Math.pow(pogsonsRatio,-star.magnitude / 2); // divide by 2 since area of element follows inverse square law
+                starEl.style.webkitTransform =
+                  starEl.style.transform = "rotateY(" + azimuth + "deg) rotateX(" + -star.declination
+                        + "deg) scale3d(" + scaleForMagnitude +"," + scaleForMagnitude + ",1) translateZ(-500px)";
+                starEl.style.fontSize = (20 / scaleForMagnitude) + "px";
+                //starEl.style.top = star.y + "px";
+                centerStarOnClick(starEl,star);
+                sky.appendChild(starEl);
+            });
+        })
+        .catch(err => {
+            console.err('Error..> ', err);
+        });
+
+    setTimeout(function(){
+        //sky.style.webkitTransform = "translate3d(500px,250px,0) rotateY(180deg)";
+    },1000);
+</script>
+
+</body>
+</html>
