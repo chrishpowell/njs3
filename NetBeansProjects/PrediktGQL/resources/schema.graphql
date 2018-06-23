@@ -1,0 +1,40 @@
+interface Node {
+  id: ID!
+  ident: String!
+}
+
+type Person implements Node {
+  id: ID!
+  ident: String!
+  fname: String!
+  lname: String!
+  email: String!
+  connections: [Person]
+}
+
+type Constellation implements Node {
+  id: ID!
+  ident: String!
+  shortname: String!
+  stars: [Star!]!
+  drawing: [StarsEdge]
+}
+
+type Star implements Node {
+  id: ID!
+  ident: String!
+  othername: String
+  constellation: Constellation
+}
+
+type StarsEdge {
+  star1: Star!
+  star2: Star!
+  dispay: Boolean!
+}
+
+type Query {
+  node(id: ID!): Node
+  allConstellations: [Constellation!]!
+  person(id: ID!): Person
+}
