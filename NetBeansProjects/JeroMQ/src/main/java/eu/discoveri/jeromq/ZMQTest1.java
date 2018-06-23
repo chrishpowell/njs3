@@ -13,11 +13,15 @@ import org.zeromq.ZMQException;
  */
 public class ZMQTest1
 {
+    static ZContext context;
+    
     public static void main(String[] args)
             throws Exception
     {
-        try( ZContext context = new ZContext() )
+        try
         {
+            context = new ZContext();
+            
             // Socket to talk to clients
             ZMQ.Socket socket = context.createSocket(ZMQ.REP);
             if( !socket.bind("tcp://127.0.0.1:8777") )
@@ -37,6 +41,10 @@ public class ZMQTest1
                 String response = "Hello, world!";
                 socket.send(response.getBytes(ZMQ.CHARSET), 0);
             }
+        }
+        catch( Exception ex )
+        {
+            ex.printStackTrace();
         }
     }
 }

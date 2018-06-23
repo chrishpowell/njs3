@@ -22,6 +22,7 @@ import org.zeromq.ZMQException;
  */
 public class TwitterFeed1
 {
+    static ZContext context;
     static String   oauth_consumer_key = "0LNtKkDTzgAlkO7SdaBsSFzCl",
                     oauth_consumer_secret = "inrVncqXYao01KeBTKK5HJZNb7T6K4Wqy5dxBWgXsxwoBRoXbB",
                     oauth_access_token = "1008662854118137861-MTWBfSJD88G8Xrzssx3RTnF8kjieDx",
@@ -57,14 +58,19 @@ public class TwitterFeed1
     public static ZMQ.Socket setupZMQ(URI uri)
             throws ZMQException
     {
-        ZMQ.Socket socket;
+        ZMQ.Socket socket = null;
         
-        try( ZContext context = new ZContext() )
+        try
         {
+            context = new ZContext();
             // Socket to talk to clients: "tcp://127.0.0.1:8777"
             socket = context.createSocket(ZMQ.REP);
             if (!socket.bind(uri.toString()))
                 {  throw new ZMQException("Socket didn't bind", 0); }
+        }
+        catch( Exception ex )
+        {
+            ex.printStackTrace();
         }
 
         return socket;
@@ -115,7 +121,7 @@ public class TwitterFeed1
             for( String tuser: twitterUser )
             {
                 List<String> userTL = getTimeLine(twitter,tuser);
-                response += userTL.get(0);
+                response += userTL.get(0)+'\n';
             }
             
             socket.send(response.getBytes(ZMQ.CHARSET), 0);
