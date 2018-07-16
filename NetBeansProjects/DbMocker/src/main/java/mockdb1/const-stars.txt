@@ -1,0 +1,33 @@
+select * from star;
+> Id Name      altname   ConstlID idlinks mag  colour display
+> -- --------- --------- -------- ------- ---- ------ -------
+> 1  Schedar   Alpha Cas 2        3,2     2.24 G-III  TRUE
+> 2  Caph      Beta Cas  2        1       2.28 X      TRUE	
+> 3  Tsih      Gamma Cas 2        4,1     2.15 X      TRUE
+> 4  Ruchbah   Delta Cas 2        5,3     2.68 X      TRUE
+> 5  Segin     Eps Cas   2        4       3.35 X      TRUE	
+> 6  Metallah  Alpha Tri 1        7,8     3.42 X      TRUE
+> 7  Deltotan  Beta Tri  1        8,6     3.0  X      TRUE
+> 8  Gamma Tri Gamma Tri 1        6,7     1.24 X      TRUE
+@ rows: 8
+
+select * from constellation;
+> Id Name       Shortname
+> -- ---------- ---------
+> 1  Triangulum Tri
+> 2  Cassiopeia Cas
+@ rows: 2
+
+
+select constellation.Id, constellation.Name, star.Id from constellation, star where star.ConstlID=constellation.Id;
+> Id Constellation StarId
+> -- ------------- ------
+> 1  Triangulum    6
+> 1  Triangulum    7
+> 1  Triangulum    8
+> 2  Cassiopeia    1
+> 2  Cassiopeia    2
+> 2  Cassiopeia    3
+> 2  Cassiopeia    4
+> 2  Cassiopeia    5
+@ rows: 8
