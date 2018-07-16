@@ -1,0 +1,149 @@
+# Entity
+interface Entity {
+    # ID
+    id: ID!
+    # name
+    name: String!
+}
+
+# Url query
+type UrlQuery {
+    # parameters (First, ?x=y, subsequently &x=y)
+    param: String
+    # fragment (#anchor)
+    fragment: String
+}
+
+# Url
+type Url {
+    # protocol (eg: ftp://)
+    protocol: String!
+    # subdomain (eg: www)
+    subdomain: String
+    # domain (eg: discoveri.eu)
+    domain: String!
+    # port (eg: :8081)
+    port: String
+    # path (eg: /)
+    path: String
+    # queries
+    query: [UrlQuery]
+}
+
+# Zodiac characteristics
+type ZodiacCharac implements Entity {
+    # ID
+    id: ID!
+    # name
+    name: String!
+    # additional info
+    additional: String
+}
+
+# Element
+type Element implements Entity {
+    # ID
+    id: ID!
+    # name
+    name: String!
+    # additional info
+    additional: String
+}
+
+# Constellation
+type Constellation implements Entity {
+    # ID
+    id: ID!
+    # name
+    name: String!
+    # additional info
+    additional: String
+}
+
+# Zodiac Sign
+type ZodiacSign implements Entity {
+    # ID
+    id: ID!
+    # name
+    name: String!
+    # Ordering
+    ord: Int!
+    # sign
+    sign: String!
+    # latin name
+    latin: String
+    # english name
+    eng: String
+    # title
+    title: String
+    # associated element
+    element: Element
+    # Symbol
+    # Start date
+    # End date
+    # Stone
+    # Colour list
+    # Day (Thursday)
+    day: String
+    # Metal list
+    # Planet list
+    # Flower list
+    # Lucky numbers
+    # other characteristics
+    charac: ZodiacCharac
+    # associated constellation
+    constellation: Constellation
+    # general description
+    descrip: String
+    # external associated url (further description)
+    extUrl: Url
+}
+
+# Astrology system
+type AstrologySystem implements Entity {
+    # ID
+    id: ID!
+    # name
+    name: String!
+    # Set of signs for this system
+    signs: [ZodiacSign]!
+}
+
+# Person
+type Person implements Entity {
+    # ID
+    id: ID!
+    # identifier
+    identifier: String
+    # name (username)
+    name: String!
+    # last name
+    lastname: String!
+    # first name
+    firstname: String!
+    # email
+    email: String!
+    # DoB
+    DoB: datetime
+    # connections
+    friends: [Person]
+}
+    
+
+# Query end points
+type QueryEndPoint {
+    # Astrologies
+    astrology(id: ID!): AstrologySystem
+    # Sign
+    sign(id: Int): ZodiacSign
+    #Signs
+    signs: ZodiacSign
+    # People
+    person(id: ID!, identifier: String): Person
+}
+
+# schema
+schema {
+    # End points
+    query: QueryEndPoint
+}
