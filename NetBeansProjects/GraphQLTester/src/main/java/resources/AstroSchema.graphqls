@@ -1,3 +1,6 @@
+# Custom scalars
+scalar datetime
+
 # Entity
 interface Entity {
     # ID

@@ -65,7 +65,11 @@ public class GQTest411 extends SimpleGraphQLServlet.Builder
                 .type("QueryEndPoint", typeWiring -> typeWiring
                     .dataFetcher("person", personDataFetcher)
                     .dataFetcher("sign", signDataFetcher))
+                .scalar(CustomScalar.DATETIME)
                 .build();
+        
+        /* Remove */
+        //wiring.getScalars().forEach((k,v)->System.out.println("...> Key: " +k+ ", Val: " +v.getName()));
         
         TypeDefinitionRegistry typeRegistry = schemaParser.parse(schemaFile);
         GraphQLSchema graphQLSchema = schemaGenerator.makeExecutableSchema(typeRegistry, wiring);
@@ -91,7 +95,6 @@ public class GQTest411 extends SimpleGraphQLServlet.Builder
         GraphQL graphQL = schemaBuild();
         
         // Get a Person
-        //;
         execResult = runQuery( graphQL, "{\nperson(id:\"fred\",identifier:\"EH\"){\nidentifier\n}\n}");
         errors = execResult.getErrors();
         if( errors.isEmpty() )
