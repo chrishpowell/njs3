@@ -65,7 +65,7 @@ public class GQTest411 extends SimpleGraphQLServlet.Builder
                 .type("QueryEndPoint", typeWiring -> typeWiring
                     .dataFetcher("person", personDataFetcher)
                     .dataFetcher("sign", signDataFetcher))
-                .scalar(CustomScalar.DATETIME)
+                .scalar(CustomScalar.ZONEDDATETIME)
                 .build();
         
         /* Remove */
@@ -95,7 +95,7 @@ public class GQTest411 extends SimpleGraphQLServlet.Builder
         GraphQL graphQL = schemaBuild();
         
         // Get a Person
-        execResult = runQuery( graphQL, "{\nperson(id:\"fred\",identifier:\"EH\"){\nidentifier\n}\n}");
+        execResult = runQuery( graphQL, "{\nperson(identifier:\"EH\"){\nidentifier\nname\nDoB\n}\n}" );
         errors = execResult.getErrors();
         if( errors.isEmpty() )
         {

@@ -1,5 +1,6 @@
-# Custom scalars
-scalar datetime
+#... Custom scalars
+# Datetime example format: 2007-12-03T10:15:30+01:00[Europe/Paris]
+scalar DateTime
 
 # Entity
 interface Entity {
@@ -127,7 +128,7 @@ type Person implements Entity {
     # email
     email: String!
     # DoB
-    DoB: datetime
+    DoB: DateTime
     # connections
     friends: [Person]
 }
@@ -142,7 +143,7 @@ type QueryEndPoint {
     #Signs
     signs: ZodiacSign
     # People
-    person(id: ID!, identifier: String): Person
+    person(identifier: String): Person
 }
 
 # schema

@@ -2,6 +2,7 @@
  */
 package eu.discoveri.graphqltester;
 
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -12,18 +13,21 @@ import java.util.UUID;
  */
 public class Person
 {
-    private java.util.UUID ID;
-    private String identifier;
-    private String name; // username
-    private String lastname, firstname;
-    private String email;
-    private List<Person> friends;
+    private java.util.UUID      ID;
+    private String              identifier;
+    private String              name; // username
+    private String              lastname, firstname;
+    private String              email;
+    private ZonedDateTime       zdt;
+    private List<Person>        friends;
     private static List<Person> preBuiltPersonList = createPersonsList();
 
-    public Person(UUID ID, String identifier, String name) {
+    public Person(UUID ID, String identifier, String name, ZonedDateTime zdt)
+    {
         this.ID = ID;
         this.identifier = identifier;
         this.name = name;
+        this.zdt = zdt;
     }
 
     public UUID getID() {
@@ -53,7 +57,16 @@ public class Person
     public List<Person> getFriends() {
         return friends;
     }
-    
+
+    public ZonedDateTime getZdt() {
+        return zdt;
+    }
+
+    public String getZDT2String()
+    {
+        return zdt.toString();
+    }
+    /* Testing */
     public static List<Person> getPersonsList()
     {
         return preBuiltPersonList;
@@ -63,12 +76,12 @@ public class Person
     {
         List<Person> persons = new ArrayList<>();
         
-        persons.add(new Person(UUID.randomUUID(),"JB","Joe Bloggs"));
-        persons.add(new Person(UUID.randomUUID(),"AE","Albert Einstein"));
-        persons.add(new Person(UUID.randomUUID(),"HF","Henry Ford"));
-        persons.add(new Person(UUID.randomUUID(),"IN","Isaac Newton"));
-        persons.add(new Person(UUID.randomUUID(),"FG","Friedrich Gauss"));
-        persons.add(new Person(UUID.randomUUID(),"EH","Edwin Hubble"));
+        persons.add(new Person(UUID.randomUUID(),"JB","Joe Bloggs", ZonedDateTime.parse("2007-12-03T10:15:30+01:00[Europe/Paris]")));
+        persons.add(new Person(UUID.randomUUID(),"AE","Albert Einstein",ZonedDateTime.parse("2007-12-03T10:15:30+01:00[Europe/Paris]")));
+        persons.add(new Person(UUID.randomUUID(),"HF","Henry Ford",ZonedDateTime.parse("2007-12-03T10:15:30+01:00[Europe/Paris]")));
+        persons.add(new Person(UUID.randomUUID(),"IN","Isaac Newton",ZonedDateTime.parse("2007-12-03T10:15:30+01:00[Europe/Paris]")));
+        persons.add(new Person(UUID.randomUUID(),"FG","Friedrich Gauss",ZonedDateTime.parse("2007-12-03T10:15:30+01:00[Europe/Paris]")));
+        persons.add(new Person(UUID.randomUUID(),"EH","Edwin Hubble",ZonedDateTime.parse("2007-12-03T10:15:30+01:00[Europe/Paris]")));
         
         return persons;
     }

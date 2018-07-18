@@ -22,67 +22,59 @@ import java.time.format.DateTimeParseException;
  */
 public class CustomScalar
 {
-    private static boolean looksLikeADateTime(String possibleDTValue)
+    private static ZonedDateTime looksLikeADateTime(String possibleDTValue)
     {
         // Parse the datetime string
+        ZonedDateTime zdt;
         try
         {
-            ZonedDateTime.parse(possibleDTValue);
+            zdt = ZonedDateTime.parse(possibleDTValue);
         }
         catch( DateTimeParseException dtpe )
         {
-            return false;
+            return ZonedDateTime.parse("0000-01-01T00:00:00-18:00");
         }
-        return true;
+        
+        return zdt;
     }
     
     /**
-     * datetime
+     * Zoned datetime
      */
-    public static final GraphQLScalarType DATETIME =
-            new GraphQLScalarType("datetime", "A custom scalar that handles datetimes", new Coercing()
+    public static final GraphQLScalarType ZONEDDATETIME =
+            new GraphQLScalarType("DateTime", "Custom scalar that handles zoned datetimes", new Coercing<ZonedDateTime,String>()
     {
         @Override
-        public Object serialize(Object dataFetcherResult)
-        {
-            String possibleDTValue = String.valueOf(dataFetcherResult);
-            if( looksLikeADateTime(possibleDTValue) )
+        public String serialize(Object dataFetcherResult)
+        {System.out.println("...> (serialize) ZonedDateTime date fetch....");
+            if( dataFetcherResult instanceof ZonedDateTime )
             {
-                return possibleDTValue;
+                return ((ZonedDateTime)dataFetcherResult).toString();
             }
-            else
-            {
-                throw new CoercingSerializeException("Unable to serialize " + possibleDTValue + " as a (zoned) datetime");
-            }
+            
+            return null;
         }
 
         @Override
-        public Object parseValue(Object input)
-        {
+        public ZonedDateTime parseValue(Object input)
+        {System.out.println("...> (parseValue) Person date fetch....");
             if( input instanceof String )
             {
-                String possibleDTValue = input.toString();
-                if( looksLikeADateTime(possibleDTValue) )
-                {
-                    return possibleDTValue;
-                }
+                return looksLikeADateTime(input.toString());
             }
             
             throw new CoercingParseValueException("Unable to parse variable value " + input + " as a (zoned) datetime");
         }
 
         @Override
-        public Object parseLiteral(Object input)
-        {
+        public ZonedDateTime parseLiteral(Object input)
+        {System.out.println("...> (parseLiteral) Person date fetch....");
             if( input instanceof StringValue )
             {
-                String possibleDTValue = ((StringValue) input).getValue();
-                if( looksLikeADateTime(possibleDTValue) )
-                {
-                    return possibleDTValue;
-                }
+                return looksLikeADateTime(((StringValue) input).getValue());
             }
-            throw new CoercingParseLiteralException("Value is not any email address : '" + String.valueOf(input) + "'");
+            
+            throw new CoercingParseLiteralException("Value is not a zoned datetime : '" + String.valueOf(input) + "'");
         }
     });
 }

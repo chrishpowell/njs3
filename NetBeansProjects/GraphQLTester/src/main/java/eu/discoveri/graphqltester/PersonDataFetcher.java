@@ -11,13 +11,16 @@ import graphql.schema.DataFetchingEnvironment;
  */
 public class PersonDataFetcher implements DataFetcher
 {
+    // This'll be a database fetch sometime...
     @Override
     public Person get(final DataFetchingEnvironment dataFE)
     {
         for( Person person: Person.getPersonsList() )
         {
             if( person.getIdentifier().equals(dataFE.getArgument("identifier")) )
+            {
                 return person;
+            }
         }
         return null;
     }
