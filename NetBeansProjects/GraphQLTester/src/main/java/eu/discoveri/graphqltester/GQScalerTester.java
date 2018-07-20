@@ -28,7 +28,6 @@ import java.util.List;
  */
 public class GQScalerTester
 {
-    private static final EnumValuesProvider LUResolver = LengthUnit::valueOf;
     private static final DataFetcher p1DataFetcher = new P1DataFetcher();
     
     /*
@@ -53,7 +52,7 @@ public class GQScalerTester
         File schemaFile = new File("/home/chrispowell/NetBeansProjects/GraphQLTester/src/main/java/resources/AstroSchemaHalf.graphqls");
        
         RuntimeWiring wiring = newRuntimeWiring()
-                .scalar(CustomScalar.ZONEDDATETIME)
+                .scalar(CustScalar.ZONEDDATETIME)
                 .type("Entity",typeWiring->typeWiring.typeResolver(resolveEntity()))
                 .type("QueryEndPoint", typeWiring -> typeWiring
                     .dataFetcher("person", p1DataFetcher))
@@ -96,7 +95,6 @@ public class GQScalerTester
         }
         else
         {
-            System.out.println("***Errors:");
             errors.forEach((gqlErr) -> {
                 System.out.println("  " +gqlErr.getMessage());
             });
