@@ -6,11 +6,17 @@ import graphql.ExecutionInput;
 import graphql.ExecutionResult;
 import graphql.GraphQL;
 import graphql.GraphQLError;
+import static graphql.Scalars.GraphQLID;
+import static graphql.Scalars.GraphQLString;
 import graphql.TypeResolutionEnvironment;
 
 import graphql.schema.DataFetcher;
+import static graphql.schema.GraphQLFieldDefinition.newFieldDefinition;
+import graphql.schema.GraphQLList;
 import graphql.schema.GraphQLSchema;
 import graphql.schema.GraphQLObjectType;
+import static graphql.schema.GraphQLObjectType.newObject;
+import graphql.schema.GraphQLTypeReference;
 import graphql.schema.TypeResolver;
 import graphql.schema.idl.EnumValuesProvider;
 import graphql.schema.idl.RuntimeWiring;
@@ -37,35 +43,57 @@ public class GQTest411 extends SimpleGraphQLServlet.Builder
         super(schema);
     }
 
-    private static EnumValuesProvider LUResolver = LengthUnit::valueOf;
+    private static final EnumValuesProvider LUResolver = LengthUnit::valueOf;
     private static TypeResolver resolveEntity()
     {
-        return new TypeResolver()
-        {
-            @Override
-            public GraphQLObjectType getType(TypeResolutionEnvironment env)
-            {
-                if( env.getObject() instanceof Person) { return (GraphQLObjectType)env.getSchema().getType("Person"); }
-                return null;
-            }    
+        return (TypeResolutionEnvironment env) -> {
+            if( env.getObject() instanceof Person) { return (GraphQLObjectType)env.getSchema().getType("Person"); }
+            return null;    
         };
     }
-    private static DataFetcher signDataFetcher = new SignDataFetcher();
-    private static DataFetcher personDataFetcher = new PersonDataFetcher();
+    private static final DataFetcher signDataFetcher = new SignDataFetcher();
+    private static final DataFetcher personDataFetcher = new PersonDataFetcher();
     
     private static GraphQL schemaBuild()
     {
         SchemaParser schemaParser = new SchemaParser();
         SchemaGenerator schemaGenerator = new SchemaGenerator();
         
-        File schemaFile = new File("/home/chrispowell/NetBeansProjects/GraphQLTester/src/main/java/resources/AstroSchema.graphqls");
+        File schemaFile = new File("/home/chrispowell/NetBeansProjects/GraphQLTester/src/main/java/resources/AstroSchemaHalf.graphqls");
+        
+        // Test schema
+//        # Person
+//        type Person implements Entity {
+//            # ID
+//            id: ID!
+//            # identifier
+//            identifier: String
+//            # name (username)
+//            name: String!
+//            # DoB
+//            DoB: DateTime
+//        }
+//        GraphQLObjectType person = newObject()
+//                .name("Person")
+//                .description("This is a Person object")
+//                .field(newFieldDefinition().name("id")
+//                        .type(GraphQLID).build())
+//                .field(newFieldDefinition().name("identifier")
+//                        .type(GraphQLString).build())
+//                .field(newFieldDefinition().name("name")
+//                        .type(GraphQLString).build())
+//                .field(newFieldDefinition().name("DoB")
+//                        .type(CustomScalar.ZONEDDATETIME).build()).build();
+//                .field(newFieldDefinition().name("friends")
+//                    .type(GraphQLList.list(GraphQLTypeReference.typeRef("Person")))).build();
+        
         RuntimeWiring wiring = newRuntimeWiring()
-                .type("Entity", typeWiring -> typeWiring.typeResolver(resolveEntity()))
-                .type("LengthUnit", typeWiring -> typeWiring.enumValues(LUResolver))
-                .type("QueryEndPoint", typeWiring -> typeWiring
-                    .dataFetcher("person", personDataFetcher)
-                    .dataFetcher("sign", signDataFetcher))
                 .scalar(CustomScalar.ZONEDDATETIME)
+                .type("Entity",typeWiring->typeWiring.typeResolver(resolveEntity()))
+                .type("LengthUnit",typeWiring->typeWiring.enumValues(LUResolver))
+                .type("QueryEndPoint", typeWiring -> typeWiring
+                    .dataFetcher("person", personDataFetcher))
+//                    .dataFetcher("sign", signDataFetcher))
                 .build();
         
         /* Remove */
@@ -111,19 +139,19 @@ public class GQTest411 extends SimpleGraphQLServlet.Builder
         }
         
         // Get a ZodiacSign
-        execResult = runQuery( graphQL, "{\nsign(id: 2){\nid\n name\n}\n}" ); // {\nastrology(id:9){\nname\n signs{\nid\n name\n}\n}\n}
-        errors = execResult.getErrors();
-        if( errors.isEmpty() )
-        {
-            Object signData = execResult.getData();
-            System.out.println("JSON>>> " +signData);
-        }
-        else
-        {
-            System.out.println("***Errors:");
-            // ** Do this with functional...
-            for( GraphQLError gqlErr: errors )
-                { System.out.println("  " +gqlErr.getMessage()); }
-        }
+//        execResult = runQuery( graphQL, "{\nsign(id: 2){\nid\n name\n}\n}" ); // {\nastrology(id:9){\nname\n signs{\nid\n name\n}\n}\n}
+//        errors = execResult.getErrors();
+//        if( errors.isEmpty() )
+//        {
+//            Object signData = execResult.getData();
+//            System.out.println("JSON>>> " +signData);
+//        }
+//        else
+//        {
+//            System.out.println("***Errors:");
+//            // ** Do this with functional...
+//            for( GraphQLError gqlErr: errors )
+//                { System.out.println("  " +gqlErr.getMessage()); }
+//        }
     }
 }
