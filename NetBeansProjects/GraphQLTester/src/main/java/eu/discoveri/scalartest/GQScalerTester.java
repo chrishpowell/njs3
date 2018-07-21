@@ -17,19 +17,17 @@ import java.util.List;
  */
 public class GQScalerTester
 {
-    private static final DataFetcher p1DataFetcher = new P1DataFetcher();
-    
     /*
      * Build the schema
      */
     private static GraphQL schemaBuild()
-    {   
-        File schemaFile = new File("/home/chrispowell/NetBeansProjects/GraphQLTester/src/main/java/resources/cst.graphqls");
+    {
+        final String SCHEMA = "/home/chrispowell/NetBeansProjects/GraphQLTester/src/main/java/resources/cst.graphqls";
        
         RuntimeWiring wiring = newRuntimeWiring()
                 .scalar(CustScalar.ZONEDDATETIME)
                 .type("QueryEndPoint", typeWiring -> typeWiring
-                    .dataFetcher("person", p1DataFetcher))
+                    .dataFetcher("person", new P1DataFetcher()))
                 .build();
         
 //        java.util.Map<String,GraphQLScalarType> stMap = wiring.getScalars();
@@ -37,7 +35,7 @@ public class GQScalerTester
 //                { System.out.println("..>KeyString: " +s+ ", Val: " +v.getDescription()); }
 //        );
         
-        TypeDefinitionRegistry typeRegistry = new SchemaParser().parse(schemaFile);
+        TypeDefinitionRegistry typeRegistry = new SchemaParser().parse(new File(SCHEMA));
         GraphQLSchema graphQLSchema = new SchemaGenerator().makeExecutableSchema(typeRegistry, wiring);
         
         return GraphQL.newGraphQL(graphQLSchema).build();

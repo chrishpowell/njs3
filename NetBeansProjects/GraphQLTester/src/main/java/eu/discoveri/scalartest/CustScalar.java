@@ -42,14 +42,14 @@ public class CustScalar
         {
             @Override
             public String serialize(Object dataFetcherResult)
-                {  System.out.println("..>Serialize(");return ((ZonedDateTime)dataFetcherResult).toString();  }
+                {  return ((ZonedDateTime)dataFetcherResult).toString();  }
 
             @Override
             public ZonedDateTime parseValue(Object input)
-                {  System.out.println("..>parseValue()");return zonedDateTime(input.toString());  }
+                {  return zonedDateTime(input.toString());  }
 
             @Override
             public ZonedDateTime parseLiteral(Object input)
-                {  System.out.println("parseLiteral()");return zonedDateTime(((StringValue) input).getValue());  }
+                {  return zonedDateTime(((StringValue) input).getValue());  }
         });
 }
