@@ -7,20 +7,21 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+
 /**
  *
  * @author chrispowell
  */
 public class Person
 {
-    private java.util.UUID      ID;
-    private String              identifier;
-    private String              name; // username
-    private String              lastname, firstname;
-    private String              email;
-    private ZonedDateTime       zdt;
-    private List<Person>        friends;
-    private static List<Person> preBuiltPersonList = createPersonsList();
+    private final java.util.UUID    ID;
+    private String                  identifier;
+    private String                  name; // username
+    private String                  lastname, firstname;
+    private String                  email;
+    private ZonedDateTime           zdt;
+    private List<Person>            friends;
+    private static List<Person>     preBuiltPersonList = createPersonsList();
 
     public Person(UUID ID, String identifier, String name, ZonedDateTime zdt)
     {
