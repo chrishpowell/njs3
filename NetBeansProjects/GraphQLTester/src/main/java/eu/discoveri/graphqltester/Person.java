@@ -19,16 +19,16 @@ public class Person
     private String                  name; // username
     private String                  lastname, firstname;
     private String                  email;
-    private ZonedDateTime           zdt;
+    private ZonedDateTime           dob;
     private List<Person>            friends;
     private static List<Person>     preBuiltPersonList = createPersonsList();
 
-    public Person(UUID ID, String identifier, String name, ZonedDateTime zdt)
+    public Person(UUID ID, String identifier, String name, ZonedDateTime dob)
     {
         this.ID = ID;
         this.identifier = identifier;
         this.name = name;
-        this.zdt = zdt;
+        this.dob = dob;
     }
 
     public UUID getID() {
@@ -59,14 +59,10 @@ public class Person
         return friends;
     }
 
-    public ZonedDateTime getZdt() {
-        return zdt;
+    public ZonedDateTime getDob() {
+        return dob;
     }
 
-    public String getZDT2String()
-    {
-        return zdt.toString();
-    }
     /* Testing */
     public static List<Person> getPersonsList()
     {

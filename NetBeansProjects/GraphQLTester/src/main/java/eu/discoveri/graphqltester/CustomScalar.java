@@ -21,7 +21,10 @@ import java.time.format.DateTimeParseException;
  */
 public class CustomScalar
 {
-    private static ZonedDateTime looksLikeADateTime(String possibleDTValue)
+    /*
+     * Parse string to ZonedDateTime
+     */
+    private static ZonedDateTime zonedDateTime(String possibleDTValue)
     {
         // Parse the datetime string
         ZonedDateTime zdt;
@@ -41,39 +44,33 @@ public class CustomScalar
      * Zoned datetime
      */
     public static final GraphQLScalarType ZONEDDATETIME =
-            new GraphQLScalarType("DateTime", "Custom scalar that handles zoned datetimes", new Coercing<ZonedDateTime,String>()
+            new GraphQLScalarType("ZonedDateTime", "Custom scalar that handles zoned datetimes", new Coercing<ZonedDateTime,String>()
     {
         @Override
         public String serialize(Object dataFetcherResult)
-        {System.out.println("...> (serialize) ZonedDateTime date fetch....");
+        {
             if( dataFetcherResult instanceof ZonedDateTime )
-            {
-                return ((ZonedDateTime)dataFetcherResult).toString();
-            }
+                { return ((ZonedDateTime)dataFetcherResult).toString(); }
             
             return null;
         }
 
         @Override
         public ZonedDateTime parseValue(Object input)
-        {System.out.println("...> (parseValue) Person date fetch....");
+        {
             if( input instanceof String )
-            {
-                return looksLikeADateTime(input.toString());
-            }
+                { return zonedDateTime(input.toString()); }
             
-            throw new CoercingParseValueException("Unable to parse variable value " + input + " as a (zoned) datetime");
+            throw new CoercingParseValueException("Unable to parse variable value " + input.toString() + " as a (zoned) datetime");
         }
 
         @Override
         public ZonedDateTime parseLiteral(Object input)
-        {System.out.println("...> (parseLiteral) Person date fetch....");
+        {
             if( input instanceof StringValue )
-            {
-                return looksLikeADateTime(((StringValue) input).getValue());
-            }
+                { return zonedDateTime(((StringValue) input).getValue()); }
             
-            throw new CoercingParseLiteralException("Value is not a zoned datetime : '" + String.valueOf(input) + "'");
+            throw new CoercingParseLiteralException("Value is not a graphql.language.StringValue: '" + input.toString() + "'");
         }
     });
 }
