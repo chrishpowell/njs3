@@ -1,0 +1,22 @@
+{
+    "name": "NJS1",
+    "version": "1.0.0",
+    "keywords": [
+        "util",
+        "functional",
+        "server",
+        "client",
+        "browser"
+    ],
+   "scripts": {
+      "start": "node index.js",
+      "ES6 -> ES5": "babel public/js/es6 --watch --presets babel-preset-env --out-dir public/js"
+   },
+    "devDependencies": {
+      "babel-cli": "^6.26.0",
+      "babel-preset-env": "^1.7.0"
+    }
+    "author": "Chris Powell, Discoveri OU",
+    "contributors": [],
+    "dependencies": {}
+}
