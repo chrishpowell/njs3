@@ -16,18 +16,18 @@ public class Person
 {
     private final java.util.UUID    ID;
     private String                  identifier;
-    private String                  name; // username
+    private String                  username;
     private String                  lastname, firstname;
     private String                  email;
     private ZonedDateTime           dob;
     private List<Person>            friends;
     private static List<Person>     preBuiltPersonList = createPersonsList();
 
-    public Person(UUID ID, String identifier, String name, ZonedDateTime dob)
+    public Person(UUID ID, String identifier, String username, ZonedDateTime dob)
     {
         this.ID = ID;
         this.identifier = identifier;
-        this.name = name;
+        this.username = username;
         this.dob = dob;
     }
 
@@ -39,8 +39,8 @@ public class Person
         return identifier;
     }
 
-    public String getName() {
-        return name;
+    public String getUserName() {
+        return username;
     }
 
     public String getLastname() {

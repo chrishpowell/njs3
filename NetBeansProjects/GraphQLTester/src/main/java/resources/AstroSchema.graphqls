@@ -1,6 +1,6 @@
 #... Custom scalars
 # Datetime example format: 2007-12-03T10:15:30+01:00[Europe/Paris]
-scalar DateTime
+scalar ZonedDateTime
 
 # Entity
 interface Entity {
@@ -119,8 +119,8 @@ type Person implements Entity {
     id: ID!
     # identifier
     identifier: String
-    # name (username)
-    name: String!
+    # username
+    username: String!
     # last name
     lastname: String!
     # first name
@@ -128,7 +128,7 @@ type Person implements Entity {
     # email
     email: String!
     # DoB
-    DoB: DateTime
+    dob: ZonedDateTime
     # connections
     friends: [Person]
 }

@@ -12,7 +12,7 @@ import graphql.schema.GraphQLSchema;
 import graphql.schema.GraphQLObjectType;
 import graphql.schema.TypeResolver;
 
-import graphql.schema.idl.EnumValuesProvider;
+//import graphql.schema.idl.EnumValuesProvider;
 import graphql.schema.idl.RuntimeWiring;
 import graphql.schema.idl.SchemaGenerator;
 import graphql.schema.idl.SchemaParser;
@@ -35,9 +35,7 @@ public class GQTest411 extends SimpleGraphQLServlet.Builder
 {
     final static String SCHEMA = "/home/chrispowell/NetBeansProjects/GraphQLTester/src/main/java/resources/AstroSchema.graphqls";
     
-    public GQTest411(GraphQLSchema schema) {
-        super(schema);
-    }
+    public GQTest411(GraphQLSchema schema) { super(schema); }
 
 //    private static final EnumValuesProvider LUResolver = LengthUnit::valueOf;
     private static TypeResolver resolveEntity()

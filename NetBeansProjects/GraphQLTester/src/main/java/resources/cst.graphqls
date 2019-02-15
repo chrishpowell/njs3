@@ -1,0 +1,21 @@
+#... Custom scalars
+# ZonedDatetime example format: 2007-12-03T10:15:30+01:00[Europe/Paris]
+scalar ZonedDateTime
+
+# Person
+type Person {
+    id: ID!
+    identifier: String
+    name: String!
+    zdt: ZonedDateTime
+}
+
+# Query end points
+type QueryEndPoint {
+    person(identifier: String): Person
+}
+
+# schema
+schema {
+    query: QueryEndPoint
+}

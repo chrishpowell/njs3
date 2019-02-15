@@ -8,14 +8,16 @@
         "client",
         "browser"
     ],
-   "scripts": {
-      "start": "node index.js",
-      "ES6 -> ES5": "babel public/js/es6 --watch --presets babel-preset-env --out-dir public/js"
-   },
+    "scripts": {
+        "start": "node index.js",
+        "build": "webpack --config webpack.dist.config.js",
+        "ES6 -> ES5": "babel public/js/es6 --watch --presets babel-preset-env --out-dir public/js"
+    },
     "devDependencies": {
-      "babel-cli": "^6.26.0",
-      "babel-preset-env": "^1.7.0"
-    }
+        "babel-cli": "^6.26.0",
+        "babel-preset-env": "^1.7.0",
+        "webpack": "^4.16.5"
+    },
     "author": "Chris Powell, Discoveri OU",
     "contributors": [],
     "dependencies": {}

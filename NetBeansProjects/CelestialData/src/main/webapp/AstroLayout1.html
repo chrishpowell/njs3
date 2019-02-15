@@ -10,11 +10,19 @@ AstroLayout 1
         <style>
             #homepage {
                 display: grid;
-                grid-template-columns: 30px 30px 300px 1fr 300px 350px;
-                grid-template-rows: minmax(max-content, 30px) 1fr 1fr 1fr 10px;
+                grid-template-columns: 30px 30px 200px 1fr 200px 350px;
+                grid-template-rows: minmax(max-content, 30px) 1fr 1fr 1fr 1fr 1fr;
             }
+            /* perspective: does not work well in grid */
             #logo {
-                padding-bottom: 5px;
+                grid-column: 3 / span 2;
+                grid-column-start: 2;
+                font-size: 20px;
+                padding-top: 22px;
+            }
+            #header {
+                height: 50px;
+                width: 400px;
             }
             #company {
                 grid-column: 1;
@@ -44,19 +52,60 @@ AstroLayout 1
                 background: lavender;
                 padding-left: 10px; padding-right: 10px;
             }
+            #mway {
+                width: 100%; height: 100%;
+                clip-path: polygon(188px 452px, 158px 19px, 400px 11px, 351px 385px, 439px 67px, 557px 14px, 574px 456px, 584px 25px, 700px 75px, 752px 359px, 752px 42px, 922px 17px, 1114px 386px, 970px 0px, 1245px 82px, 1353px 550px, 15px 553px, 10px 48px, 107px 18px);
+            }
             #dynamic {
                 grid-column: 5;
                 background: lightcyan;
                 padding-left: 10px; padding-right: 10px;
             }
+            #login {
+                grid-column: 5;
+                grid-row: 1;
+                border: solid thin black;
+                padding: 3px;
+                padding-right: 7px;
+                margin: 3px 3px 5px 3px;
+            }
+            .button {
+                border: none;
+                color: white;
+                width: 100%;
+                padding: 5px 15px;
+                text-align: center;
+                text-decoration: none;
+                display: inline-block;
+                font-size: 14px;
+                margin: 4px 2px;
+                cursor: pointer;
+                box-shadow: 0 8px 16px 0 rgba(0,0,0,0.2), 0 6px 20px 0 rgba(0,0,0,0.19);
+                -webkit-transition-duration: 0.4s; /* Safari */
+                transition-duration: 0.3s;
+            }
+            .login-button {
+                background-color: darkblue;
+            }
+            .login-button-hover:hover {
+                box-shadow: none;
+            }
+            .register-button {
+                background-color: darkred;
+                box-shadow: 0 8px 16px 0 rgba(0,0,0,0.2), 0 6px 20px 0 rgba(0,0,0,0.19);
+            }
+            .register-button-hover:hover {
+                box-shadow: none;
+            }
             #date {
                 grid-column: 6;
             }
-
             #datecontainer {
-                grid-row: 3 / span 2;
-                grid-row-start: 3;
+                grid-row: 4 / span 2;
+                grid-row-start: 4;
                 grid-row-end: span 2;
+                padding-left: 20px;
+                padding-top: 50px;
             }
             #large-date {
                 display: grid;
@@ -67,7 +116,7 @@ AstroLayout 1
             }
             .vbigdate {
                 font-family: Helvetica;
-                font-size: 2500%;
+                font-size: 2000%;
                 margin-bottom: -10px;
                 line-height: 75%
             }
@@ -104,8 +153,8 @@ AstroLayout 1
             }
             #foot0 {
                 font-family: Helvetica;
-                font-size: 25px;
-                line-height: 25px;
+                font-size: 20px;
+                line-height: 20px;
                 text-align: justify;
                 text-justify: inter-word;
                 grid-row: 2;
@@ -129,11 +178,15 @@ AstroLayout 1
     </head>
     <body style="margin: 30px;">
         <div id="homepage">
-            <div id="logo"><img src="../images/logo-beta2.png" alt /></div>
+            <div id="logo"><img id="header" src="./images/Header.png" alt></div>
             <div id="company" class="top2bottom-grad">Predikt.io</div>
             <div id="nav">Nav</div>
-            <div id="content">Content</div>
+            <div id="content"><img id="mway" src="../images/Universe1.png" /></div>
             <div id="dynamic">Dynamic</div>
+            <div id="login">
+                <button class="button login-button login-button-hover">Login</button>
+                <button class="button register-button register-button-hover">Register</button>
+            </div>
             <div id="date">
                 <div id="datecontainer">
                     <div id="large-date">
@@ -159,11 +212,11 @@ AstroLayout 1
                 // Default language is English
                 lang = lang || 'en-GB';
                 return this.toLocaleString(lang, {month: 'long'});
-            }
+            };
 
             function separateNumberIntoUnits(n)
             {
-                if (n == 0)
+                if (n === 0)
                     return [0];
 
                 var arr = [];
@@ -173,7 +226,6 @@ AstroLayout 1
                 {
                     arr.unshift((n % 10) * i);
                     n = Math.floor(n / 10);
-                    i *= 10
                 }
 
                 return arr;

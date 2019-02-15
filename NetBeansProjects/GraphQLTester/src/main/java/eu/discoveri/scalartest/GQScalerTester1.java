@@ -4,10 +4,8 @@ package eu.discoveri.scalartest;
 
 import graphql.*;
 import graphql.schema.*;
-import graphql.schema.idl.*;
-import static graphql.schema.idl.RuntimeWiring.newRuntimeWiring;
+import static graphql.schema.GraphQLSchema.newSchema;
 
-import java.io.File;
 import java.util.List;
 
 
@@ -15,7 +13,7 @@ import java.util.List;
  *
  * @author chrispowell
  */
-public class GQScalerTester
+public class GQScalerTester1
 {
     /*
      * Build the schema
@@ -23,17 +21,11 @@ public class GQScalerTester
     private static GraphQL schemaBuild()
     {
         final String SCHEMA = "/home/chrispowell/NetBeansProjects/GraphQLTester/src/main/java/resources/cst.graphqls";
-       
-        RuntimeWiring wiring = newRuntimeWiring()
-                .scalar(CustScalar.ZONEDDATETIME)
-                .type("QueryEndPoint", typeWiring -> typeWiring
-                    .dataFetcher("person", new P1DataFetcher()))
-                .build();
-        
-        TypeDefinitionRegistry typeRegistry = new SchemaParser().parse(new File(SCHEMA));
-        GraphQLSchema graphQLSchema = new SchemaGenerator().makeExecutableSchema(typeRegistry, wiring);
-        
-        return GraphQL.newGraphQL(graphQLSchema).build();
+
+//        GraphQLSchema graphQLSchema = newSchema().query().build();
+//        
+//        return GraphQL.newGraphQL(graphQLSchema).build();
+return null;
     }
     
     /*

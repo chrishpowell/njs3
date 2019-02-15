@@ -46,6 +46,12 @@
             <artifactId>spqr</artifactId>
             <version>0.9.7</version>
         </dependency>
+        <!-- https://mvnrepository.com/artifact/io.ratpack/ratpack-core -->
+        <dependency>
+            <groupId>io.ratpack</groupId>
+            <artifactId>ratpack-core</artifactId>
+            <version>1.5.4</version>
+        </dependency>
     </dependencies>
     <build>
         <plugins>
