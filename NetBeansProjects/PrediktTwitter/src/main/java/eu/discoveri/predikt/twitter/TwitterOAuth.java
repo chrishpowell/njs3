@@ -1,14 +1,11 @@
 /*
  */
-package eu.discoveri.predikttwitter;
+package eu.discoveri.predikt.twitter;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.net.URLConnection;
 import java.security.SecureRandom;
-import sun.util.logging.PlatformLogger;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
 
 /**
  *
@@ -78,7 +75,7 @@ public class TwitterOAuth
         // oauth_token 	370773112-GmHxMAgYyLbNEtIKZeRNFsMKPR9EyMZeS9weJAEb
         // oauth_version 	1.0
         
-        sun.util.logging.PlatformLogger.getLogger("sun.net.www.protocol.http.HttpURLConnection").setLevel(PlatformLogger.Level.ALL);
+        Logger LOGGER = Logger.getLogger(TwitterOAuth.class.getName());
         
         int ts = Double.valueOf(System.currentTimeMillis() / 1000.).intValue();
         StringBuilder authSb = new StringBuilder();
