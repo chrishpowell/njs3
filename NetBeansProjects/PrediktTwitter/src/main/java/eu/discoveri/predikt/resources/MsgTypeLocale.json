@@ -1,0 +1,23 @@
+{
+    "$schema": "http://json-schema.org/schema#",
+    "description": "Locale, tweets request message: Discoveri OU",
+    "title": "Message request",
+    "type": "object",
+    "properties": {
+        "msgType": {
+            "description": "Message request type, eg: Tweets, Locale, etc.",
+            "type": "string"
+        },
+        "message": {
+            "description": "The message selector object, eg: {'ctryLang':'en-GB'}, {'sign':'Aries'}",
+            "type": "object",
+            "properties": {
+                "ctryLang": {
+                    "type": "string"
+                }
+            },
+            "required": ["ctryLang"]
+        }
+    },
+    "required": ["msgType", "message"]
+}

@@ -9,16 +9,25 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
+import com.github.fge.jsonschema.core.exceptions.ProcessingException;
+import com.github.fge.jsonschema.core.report.ProcessingReport;
+import com.github.fge.jsonschema.main.JsonSchema;
+import com.github.fge.jsonschema.main.JsonSchemaFactory;
+
 import eu.discoveri.predikt.i18n.FullCountry;
 import eu.discoveri.predikt.i18n.LanguageCountry;
 import eu.discoveri.predikt.system.Constants;
+import eu.discoveri.predikt.utils.BasicTSLogger;
 import eu.discoveri.predikt.system.TweetsCache;
-import eu.discoveri.predikt.utils.PropertiesFileRead;
+import eu.discoveri.predikt.utils.PrediktProperties;
 import eu.discoveri.predikt.utils.SimpleZodiacDates;
+import eu.discoveri.zmq.scheduler.ZMQJob;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.security.SecureRandom;
 
 import org.quartz.Job;
@@ -49,8 +58,10 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
 import java.time.LocalDate;
+import java.util.concurrent.TimeUnit;
 
 import org.javatuples.Triplet;
+import org.quartz.Scheduler;
 
 import org.zeromq.SocketType;
 import org.zeromq.ZContext;
@@ -71,9 +82,16 @@ public class PrediktHoroTweets implements Job
 {
     // Ready state
     private static boolean                  ready = false;
+    // Running state
+    private static boolean                  running = true;
+    // Semaphore
+    private static Semaphore                mutex;
+    // Tweet service
+    private static ExecutorService          tweetService;
     // Twitter handle
     private static Twitter                  t = buildTwitter();
     // Socket for twitter
+    private static ZContext                 zcontext = new ZContext();
     private static ZMQ.Socket               socket = null;
     // JSON mapper
     private final static ObjectMapper       mapper = new ObjectMapper();
@@ -358,18 +376,26 @@ public class PrediktHoroTweets implements Job
     /**
      * Fire off 0MQ:REP socket thread.
      * Reads tweets from cache. (See ZMQJob)
+     * 
+     * @throws ProcessingException
      */
     public static void threadTweetSocket()
+            throws ProcessingException
     {
+        // JSON Schema
+        final Path p = Paths.get(Constants.MSGSCHEMA);    
+        // Validate msg via schema
+        final JsonSchema msgSchema = JsonSchemaFactory.byDefault().getJsonSchema(p.toUri().toString());
+        
         // Just the one thread (for now)
-        Semaphore mutex = new Semaphore(1);
+        mutex = new Semaphore(1);
         //System.out.println("...In PrediktHoroTweets.threadTweetSocket");
         
         // Thread for socket
-        ExecutorService tweetService = Executors.newFixedThreadPool(1);
+        tweetService = Executors.newFixedThreadPool(1);
 
         Runnable getNSendTweets = () ->
-        {   //System.out.println("In PrediktHoroTweets.getNSendTweets thread...");
+        {
             // Blocking read until a request made (to tweet cache)
             // Get AtomicReference, get Map (multiple languages)
             // recvStr(0) defines Lang/Ctry (aa-BB: Map key, eg:zh-CN)
@@ -378,13 +404,19 @@ public class PrediktHoroTweets implements Job
                 // Lock the thread
                 mutex.acquire();
                 
-                while( true )
+                while( running )
                 {
                     String s = socket.recvStr(0);
                     System.out.println("::> Socket recv: " +s);
 
                     // Check we've been sent a decent message and key
                     JsonNode root = mapper.readTree(s);  // root of JSON
+
+                    // Validate incoming message request against schema
+                    ProcessingReport prep = msgSchema.validate(root);
+                    System.out.println("--[inc msg valid]--> " +prep);
+        
+                    // Expect twee channel request
                     if( !root.at("/msgType").textValue().equalsIgnoreCase(zmqProps.getProperty(Constants.TWTCHAN)) )
                     {
                         System.exit(3);  // *** @TODO change!!
@@ -393,19 +425,31 @@ public class PrediktHoroTweets implements Job
                     String ctryLang = root.at("/message/ctryLang").textValue();
                     // In case the user somehow writes a wrong URL attribute...
                     if( !LanguageCountry.getLangCtry().containsKey(ctryLang) )
-                    {
+                    { System.out.println("Sending default--------> " +TweetsCache.getHoroTweets().get().get(Constants.ENGB));
                         socket.send(TweetsCache.getHoroTweets().get().get(Constants.ENGB));
                     }
                     else
                     {
                         //System.out.println("ctryLang: " +ctryLang);
                         String tweets = TweetsCache.getHoroTweets().get().get(ctryLang);
+                        TweetsCache.tweetCacheDump();
+                        BasicTSLogger.Logger(" Tweets going back: " +tweets );
                         if( tweets.length() != 0 )
                             socket.send(tweets);
                         else // Send default language
                             socket.send(TweetsCache.getHoroTweets().get().get(Constants.ENGB));
                     }
                 }
+            }
+            catch( ProcessingException pex )
+            {
+                // Shutdown the thread
+                mutex.release();
+                tweetService.shutdown();
+                
+                // Log
+                System.out.println("!ERROR (threadTweetSocket): " +pex.getMessage() );
+                System.exit(5);
             }
             catch( IOException | InterruptedException exx )
             {
@@ -417,12 +461,35 @@ public class PrediktHoroTweets implements Job
                 System.out.println("!ERROR (threadTweetSocket): " +exx.getMessage() );
                 System.exit(4);
             }
+            catch( ZMQException zex )
+            {
+                zex.printStackTrace();
+                running = false;
+            }
         };
         
         // Execute the get/send tweets
-        tweetService.execute(getNSendTweets);
+        if( running ) { tweetService.execute(getNSendTweets); }
         
         //System.out.println("...Out PrediktHoroTweets.threadTweetSocket");
+    }
+    
+    
+    /**
+     * Access to mutex
+     */
+    private static Semaphore getMutex()
+    {
+        return mutex;
+    }
+    
+    
+    /**
+     * Access to tweet service
+     */
+    private static ExecutorService getTweetService()
+    {
+        return tweetService;
     }
 
     
@@ -434,11 +501,11 @@ public class PrediktHoroTweets implements Job
     public static void initHoroTweets()
             throws Exception
     {
-        // Read the ZMQ properties
-        zmqProps = PropertiesFileRead.getPropsMap().get(Constants.ZMQPROPSKEY);
+        // Read the ZMQ properties (must have read file first!)
+        zmqProps = PrediktProperties.getPropsMap().get(Constants.ZMQPROPSKEY);
         
         // 0MQ setup (usually: bind for server, connect for client)
-        socket = new ZContext().createSocket(SocketType.REP);
+        socket = zcontext.createSocket(SocketType.REP);
         System.out.println("Get tweets socket at: "+zmqProps.getProperty(Constants.ZMQ1URL,Constants.ZMQ1URLDEF));
         if( !socket.bind(zmqProps.getProperty(Constants.ZMQ1URL,Constants.ZMQ1URLDEF)) )
         {
@@ -497,8 +564,9 @@ public class PrediktHoroTweets implements Job
     public static void main(String[] args)
             throws Exception
     {
-        // Initialise twitter system
-        initHoroTweets();
+        // Initialise 0MQ and twitter system
+        ZMQJob.init();
+        ZMQJob.tweetsInit();
         
         // Let's se what we have
         TwitterAstroAccts.dumpTwitterAstroAccts();
@@ -526,5 +594,58 @@ public class PrediktHoroTweets implements Job
         tweets = TweetsCache.getHoroTweets().get().get("en-GB");
         if( tweets != null )
             System.out.println("EN> " +tweets);
+        
+        /*
+         * Shutdown system
+         */
+        // Message frontend to close sockets
+        // TBD
+        
+        // Kill all threads etc.
+        System.out.println("Mutex release...");
+        getMutex().release();
+        
+        // Ignore FE requests
+        System.out.println("Stop receiving tweet socket requests...");
+        running = false;
+        socket.close();
+        zcontext.close();
+
+        
+        // Scheduler shutdown
+        System.out.println("Get all scheduled jobs and stop...");
+        Scheduler scheduler = ZMQJob.getScheduler();
+        List<JobExecutionContext> jobs = scheduler.getCurrentlyExecutingJobs();
+        for( JobExecutionContext job: jobs )
+        {
+            scheduler.deleteJob(job.getJobDetail().getKey());
+        }
+        
+        System.out.println("Scheduler stop...");
+        scheduler.shutdown();
+
+        // Tweet service shutdown
+        System.out.println("Tweet service shutdown (this could take a minute)...");
+        ExecutorService pool = getTweetService();
+        try
+        {
+            pool.shutdown();
+            // Wait a while for existing tasks to terminate
+            if( !pool.awaitTermination(Constants.POOLWAIT, TimeUnit.SECONDS) )
+            {
+              pool.shutdownNow(); // Cancel currently executing tasks
+              // Wait a while for tasks to respond to being cancelled
+              if( !pool.awaitTermination(Constants.POOLWAIT, TimeUnit.SECONDS) )
+                  System.err.println("Pool did not terminate");
+            }
+        }
+        catch( InterruptedException iex )
+        {
+            pool.shutdownNow(); // Force shutdown
+            Thread.currentThread().interrupt(); // Preserve interrupt status
+        }
+        
+        // Wind up
+        System.out.println("System has been shutdown...");
     }
 }

@@ -18,7 +18,7 @@ import java.util.Properties;
  * @author Chris Powell, Discoveri OU
  * @email info@astrology.ninja
  */
-public class PropertiesFileRead
+public class PrediktProperties
 {
     private static Map<String,Properties> propsMap = new HashMap<>();
     

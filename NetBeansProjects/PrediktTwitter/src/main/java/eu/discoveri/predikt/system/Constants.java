@@ -21,6 +21,11 @@ public class Constants
     public static final String      ZODIACPROPSKEY = "ZODIACPROPS";
     
     /*
+     * 0MQ message schema
+     */
+    public static final String      MSGSCHEMA = "/home/chrispowell/NetBeansProjects/PrediktTwitter/src/main/java/eu/discoveri/predikt/resources/MsgTypeLocale.json";
+    
+    /*
      * ZMQ property constants (defaults set)
      */
     // Property file
@@ -72,6 +77,8 @@ public class Constants
     // frequently and we could be on the other side of the world.
     public static final long        HRS = 24;
     public static final long        HRSINMS = 1000*60*60*HRS;
+    // Tweet service (pool) shutdown wait (secs)
+    public static final long        POOLWAIT = 20;
     // Limit to 2 tweets per
     public static final long        TWEETSLIM = 2;
     // Default tweet language

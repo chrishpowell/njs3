@@ -11,7 +11,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import eu.discoveri.predikt.mockdb.*;
 import eu.discoveri.predikt.system.Constants;
-import eu.discoveri.predikt.utils.PropertiesFileRead;
+import eu.discoveri.predikt.utils.BasicTSLogger;
+import eu.discoveri.predikt.utils.PrediktProperties;
 
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -47,7 +48,7 @@ public class PrediktI18N
     // JSON mapper
     private final static ObjectMapper           mapper = new ObjectMapper();
     // Locale (default)
-    private static String                       ctryLang = "en-GB";
+    private static String                       ctryLang = Constants.ENGBDEF;
     // List of I18Ns
     private final static Map<String,I18NCache>  listI18Ns = new HashMap<>();
 
@@ -58,9 +59,9 @@ public class PrediktI18N
      *      -----------------------------------------------
      *
      *---------------------------------------------------------------*/
-    public static void getI18NFromDb()
+    public static void getI18NFromDataBase()
             throws JsonProcessingException
-    {   
+    {
         // Mock db get
         switch( ctryLang )
         {
@@ -185,8 +186,8 @@ public class PrediktI18N
         // Just the one thread (for now)
         Semaphore mutex = new Semaphore(1);
         
-        // Read properties
-        zmqProps = PropertiesFileRead.getPropsMap().get(Constants.ZMQPROPSKEY);
+        // Read properties (must have read properties file first!)
+        zmqProps = PrediktProperties.getPropsMap().get(Constants.ZMQPROPSKEY);
         
         // 0MQ setup (usually, bind: server, connect: client)
         socket = new ZContext().createSocket(SocketType.REP);
@@ -224,9 +225,9 @@ public class PrediktI18N
                     // What locale?
                     ctryLang = root.at("/message/ctryLang").textValue();
                     // Get I18N data from Db
-                    getI18NFromDb();
+                    getI18NFromDataBase();
 
-                    System.out.println( "JSON going back: " +formReturnI18NJSON(ctryLang) );
+                    BasicTSLogger.Logger(" JSON going back: " +formReturnI18NJSON(ctryLang) );
                     socket.send( formReturnI18NJSON(ctryLang) );
                 }
             } catch( InterruptedException | IOException exx )

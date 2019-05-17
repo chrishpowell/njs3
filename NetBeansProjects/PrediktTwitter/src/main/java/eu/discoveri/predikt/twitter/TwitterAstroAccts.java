@@ -142,9 +142,9 @@ public class TwitterAstroAccts
         taurus.put(Constants.ENGBCL, Arrays.asList(new TwitterAcct("taurus_scope",2,true,"",""),
                                                    new TwitterAcct("taurus_scopes",3,true,"",""),
                                                    new TwitterAcct("Taurus_Horo",1,true,"",""))   );
-        taurus.put(Constants.FRFRCL, Arrays.asList(new TwitterAcct("taurus_scope",2,true,"",""),
-                                                   new TwitterAcct("taurus_scopes",3,true,"",""),
-                                                   new TwitterAcct("Taurus_Horo",1,true,"",""))   );
+        taurus.put(Constants.FRFRCL, Arrays.asList(new TwitterAcct("LeVraiHoroscope",2,true,"",""),
+                                                   new TwitterAcct("Signe_Taureau",3,true,"Petit_Horoscope","taureau"),
+                                                   new TwitterAcct("HQ_Taureau",1,true,"",""))   );
         grpUserAccts.put("Taurus", taurus);
                 
         // Aries astro___belier belier__astro
