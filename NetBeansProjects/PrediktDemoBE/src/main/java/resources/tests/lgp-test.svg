@@ -1,0 +1,8 @@
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:jfreesvg="http://www.jfree.org/jfreesvg/svg" width="110" height="110" text-rendering="auto" shape-rendering="auto">
+<defs><linearGradient id="_299801975427642lgp3" x1="70" y1="70" x2="90" y2="90" spreadMethod="repeat" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="rgb(255,0,0)"/><stop offset="50%" stop-color="rgb(255,255,0)"/><stop offset="100%" stop-color="rgb(0,0,255)"/></linearGradient>
+<linearGradient id="_299801975427642lgp1" x1="80" y1="10" x2="80" y2="50" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="rgb(255,0,0)"/><stop offset="100%" stop-color="rgb(0,0,255)"/></linearGradient>
+<linearGradient id="_299801975427642lgp2" x1="10" y1="100" x2="50" y2="60" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="rgb(255,0,0)"/><stop offset="100%" stop-color="rgb(0,0,255)"/></linearGradient>
+<linearGradient id="_299801975427642lgp0" x1="10" y1="30" x2="50" y2="30" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="rgb(255,0,0)"/><stop offset="100%" stop-color="rgb(0,0,255)"/></linearGradient>
+</defs>
+<rect x="10" y="10" width="40" height="40" style="fill: url(#_299801975427642lgp0); fill-opacity: 1.0" /><rect x="60" y="10" width="40" height="40" style="fill: url(#_299801975427642lgp1); fill-opacity: 1.0" /><rect x="10" y="60" width="40" height="40" style="fill: url(#_299801975427642lgp2); fill-opacity: 1.0" /><rect x="60" y="60" width="40" height="40" style="fill: url(#_299801975427642lgp3); fill-opacity: 1.0" /></svg>
