@@ -24,7 +24,7 @@ public class BirthChart
     private final ChartType                   defChartType = ChartType.PLACIDUS;
     private final LocalDateTime               birthDate;
     private final LatLon                      birthPlace;
-    private final Map<Integer,HousePlusAngle> hpa = new HashMap<>();
+    private final Map<Integer,CuspPlusAngle> hpa = new HashMap<>();
     
     public BirthChart( String shortname, LocalDateTime ldt, LatLon birthplace )
     {

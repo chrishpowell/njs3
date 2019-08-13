@@ -12,5 +12,7 @@ public enum ChartType
     PLACIDUS,
     KOCH,
     MAGINI,
-    REGIOMONTANUS;
+    REGIOMONTANUS,
+    MERIDIAN,
+    KRUSINSKI;
 }

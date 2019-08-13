@@ -13,31 +13,32 @@ import java.util.Map;
  */
 public enum ZodiacHouse
 {
-    ARIES("Aries",0.d,29.9999d),
-    TAURUS("Taurus",30.d,59.9999d),
-    GEMINI("Gemini",60.d,89.9999d),
-    CANCER("Cancer",90.d,119.9999d),
-    LEO("Leo",120.d,149.9999d),
-    VIRGO("Virgo",150.d,179.9999d),
-    LIBRA("Libra",180.d,209.9999d),
-    SCORPIO("Scorpio",210.d,239.9999d),
-    SAGITTARIUS("Sagittarius",240.d,269.9999d),
-    CAPRICORN("Capricorn",270.d,299.9999d),
-    AQUARIUS("Aquarius",300.d,329.9999d),
-    PISCES("Pisces",330.d,359.9999d),
+    ARIES("Aries","Ari",0.d,29.9999d),
+    TAURUS("Taurus","Tau",30.d,59.9999d),
+    GEMINI("Gemini","Gem",60.d,89.9999d),
+    CANCER("Cancer","Can",90.d,119.9999d),
+    LEO("Leo","Leo",120.d,149.9999d),
+    VIRGO("Virgo","Vir",150.d,179.9999d),
+    LIBRA("Libra","Lib",180.d,209.9999d),
+    SCORPIO("Scorpio","Sco",210.d,239.9999d),
+    SAGITTARIUS("Sagittarius","Sag",240.d,269.9999d),
+    CAPRICORN("Capricorn","Cap",270.d,299.9999d),
+    AQUARIUS("Aquarius","Aqu",300.d,329.9999d),
+    PISCES("Pisces","Pis",330.d,359.9999d),
     // Special entries of Midheaven/MC and Ascendant
-    MC("MC",0.d,0.d),
-    ASC("ASC",0.d,0.d);
+    MC("MC","MC",0.d,0.d),
+    ASC("ASC","ASC",0.d,0.d);
     
     // Name
-    private final String    name;
+    private final String    name, shortName;
     // Start and end (degrees and radians)
     private final double    degStart, degEnd,
                             radStart, radEnd;
     
-    private ZodiacHouse( String name, double degStart, double degEnd )
+    private ZodiacHouse( String name, String shortname, double degStart, double degEnd )
     {
         this.name = name;
+        this.shortName = shortname;
         this.degStart = degStart;
         this.degEnd = degEnd;
         this.radStart = Math.toRadians(degStart);
@@ -46,6 +47,7 @@ public enum ZodiacHouse
 
     // Getters
     public String getName() { return name; }
+    public String getShortname() { return shortName; }
     public double getDegStart() { return degStart; }
     public double getDegEnd() { return degEnd; }
     public double getRadStart() { return radStart; }

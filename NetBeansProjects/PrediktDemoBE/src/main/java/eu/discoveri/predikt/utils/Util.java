@@ -5,7 +5,6 @@ package eu.discoveri.predikt.utils;
 
 import java.text.DecimalFormat;
 import java.time.LocalDate;
-import java.time.Month;
 
 
 /**
@@ -83,6 +82,61 @@ public class Util
     }
     
     /**
+     * Convert House degrees decimal to hh Name mm' ss.ss".
+     * Note: Always positive within a House.  See dec2ddmmss for handling E/W, N/S 
+     * 
+     * @param degdec
+     * @param houseName 
+     * @return 
+     */
+    public static String houseDec2ddmmss( String houseName, double degdec )
+    {
+        DecimalFormat dfs = new DecimalFormat("##.#");
+
+        // Convert to degs/mins/secs
+        int degs = (int)(degdec - Util.mod(degdec,1.0));
+        double mins = (degdec - degs)*60.d;
+        double secs = (mins - (int)mins)*60.d;
+
+        return degs+" "+houseName+" "+(int)mins+"\u2032 "+dfs.format(secs)+"\u2033";
+    }
+    
+    /**
+     * Convert degrees decimal to hh mm' ss.ss"
+     * 
+     * @param degdec
+     * @param lat true if latitude N/S, otherwise E/W.
+     * @return 
+     */
+    public static String dec2ddmmss( double degdec, boolean lat )
+    {
+        DecimalFormat dfs = new DecimalFormat("##.#");
+        // Default hemisphere (N/S, E/W)
+        String hemi = "N";
+        
+        // Converting longitude
+        if( !lat )
+            { hemi = "E"; }
+        
+        // Handle negative degrees
+        if( degdec < 0.0d )
+            {
+                degdec = -degdec;
+                if( lat )
+                    { hemi = "S"; }
+                else
+                { hemi = "W"; }
+            }
+        
+        // Convert to degs/mins/secs
+        int degs = (int)(degdec - Util.mod(degdec,1.0));
+        double mins = (degdec - degs)*60.d;
+        double secs = (mins - (int)mins)*60.d;
+
+        return degs+"\u00b0"+" "+(int)mins+"\u2032 "+dfs.format(secs)+"\u2033 "+hemi;
+    }
+    
+    /**
      * Degree triple to radians.
      * 
      * @param deg
@@ -122,7 +176,7 @@ public class Util
     }
     
     /**
-     * Calculate obliquity.
+     * Calculate obliquity in degrees.
      * 
      * @param date
      * @return 
@@ -130,6 +184,17 @@ public class Util
     public static double calcObliquityDegs( LocalDate date )
     {
         return Constants.ETILT1JAN1900 - Constants.ETILTMOVE * TimeScale.daysSince1900(date);
+    }
+    
+    /**
+     * Uppercase first letter of string, lowercase the rest.
+     * 
+     * @param str
+     * @return 
+     */
+    public static String caps( String str )
+    {
+        return str.substring(0, 1).toUpperCase() + str.substring(1).toLowerCase();
     }
     
 
@@ -149,6 +214,8 @@ public class Util
         System.out.println("Mod function -3135.9347 mod 360. should be 104.0652: "+df.format(Util.mod(-3135.9347d,360.d)));
         System.out.println("Mod function -54.7324 mod 2*pi should be 1.81866: " +df.format(Util.mod(-54.7324d,6.283185d)));
         System.out.println("Mod function -45 mod 360 should be 315: " +Util.mod(-45.d,Constants.ANORBITDEG));
+        System.out.println("Mod function 0.2750111 mod 1.0 should be 0.2750111: " +Util.mod(.2750111d, 1.0d));
+        System.out.println("Mod function 2.2750111 mod 1.0 should be 0.2750111: " +Util.mod(2.2750111d, 1.0d));
         System.out.println("");
     }
     
@@ -193,6 +260,26 @@ public class Util
     {
         System.out.println("Obliq (1.1.1900): " +calcObliquityDegs(LocalDate.of(1900,1,1)));
         System.out.println("Obliq (1.1.2000): " +calcObliquityDegs(LocalDate.of(2000,1,1)));
+        
+        // Loop over dates
+//        for( int mm = 1; mm <= 12; mm++ )
+//        {
+//            LocalDate d1 = LocalDate.of(1990,mm,1);
+//            LocalDate d2 = LocalDate.of(1990,mm,9);
+//            LocalDate d3 = LocalDate.of(1990,mm,15);
+//            LocalDate d4 = LocalDate.of(1990,mm,21);
+//            LocalDate d5 = LocalDate.of(1990,mm,22);
+//            LocalDate d6 = LocalDate.of(1990,mm,23);
+//            LocalDate d7 = LocalDate.of(1990,mm,28);
+//            
+//            System.out.println("1/"+mm+": "+calcObliquityDegs(d1));
+//            System.out.println("9/"+mm+": "+calcObliquityDegs(d2));
+//            System.out.println("15/"+mm+": "+calcObliquityDegs(d3));
+//            System.out.println("21/"+mm+": "+calcObliquityDegs(d4));
+//            System.out.println("22/"+mm+": "+calcObliquityDegs(d5));
+//            System.out.println("23/"+mm+": "+calcObliquityDegs(d6));
+//            System.out.println("28/"+mm+": "+calcObliquityDegs(d7));
+//        }
     }
     
 
@@ -209,6 +296,6 @@ public class Util
 //        
 //        testDegRad();
 
-//        testObliq();
+        testObliq();
     }
 }

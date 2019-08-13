@@ -37,7 +37,7 @@ import org.json.JSONObject;
 public class TimeScale
 {
     // Date for 1st Jan 1900
-    private static LocalDate firstJan1900 = LocalDate.of(1900,1,1);
+    private static final LocalDate firstJan1900 = LocalDate.of(1900,1,1);
     
     // Format double string
     static DecimalFormat df = new DecimalFormat("#######.#####");
@@ -193,6 +193,24 @@ public class TimeScale
     }
     
     /**
+     * Convert hours decimal to hh:mm:ss.ss
+     * 
+     * @param realt
+     * @return 
+     */
+    public static String time2Hhmmss( double realt )
+    {
+        DecimalFormat dfs = new DecimalFormat("##.#");
+        
+        // Convert to hh:mm:ss.ss
+        int hrs = (int)(realt - Util.mod(realt,1.0));
+        double mns = (realt - hrs)*60.d;
+        double sec = (mns - (int)mns)*60.d;
+        
+        return String.format("%02d",hrs)+"h:"+String.format("%02d",(int)mns)+"m:"+dfs.format(sec)+"s";
+    }
+    
+    /**
      * Convert hr/min/sec/10ths-sec to decimal time.
      * 
      * @param lt
@@ -212,9 +230,7 @@ public class TimeScale
      * Datetime in given zone converted to UTC.
      * 
      * @param timeInZone
-     * @param latitude Note N is positive, S is negative
-     * @param longitude Note E is negative, W is positive.
-     * recognised.
+     * @param place
      * @throws Exception
      * @return 
      */
@@ -325,10 +341,9 @@ public class TimeScale
     }
 
     /**
-     * Get position from place and local time.
+     * Get position from place (degrees).
      * 
      * @param place
-     * @param ldt 
      * @return [lat,lon]
      * @throws Exception
      */
@@ -356,7 +371,25 @@ public class TimeScale
     }
     
     /**
-     * Get Local Sidereal Time (LST) in Hr:Min:Sec.
+     * ??
+     * Get LST as hh:mm:ss.ss
+     * 
+     * @param place
+     * @param ldt
+     * @return
+     * @throws MalformedURLException
+     * @throws IOException
+     * @throws GeonamesNoResultsException 
+     */
+    public static String getLSTHrMinSec( LatLon place, LocalDateTime ldt )
+            throws MalformedURLException, IOException, GeonamesNoResultsException
+    {
+        return time2Hhmmss( getLSTHrs(place,ldt) );
+    }
+    
+    /**
+     * ??
+     * Get Local Sidereal Time (LST) in Hrs decimal
      * 
      * @param place
      * @param ldt
@@ -369,17 +402,20 @@ public class TimeScale
             throws MalformedURLException, IOException, GeonamesNoResultsException
     {
         // Now get timezone from geonames
-        URL url = new URL(" http://api.geonames.org/timezoneJSON?lat="+place.getLatitude()+"&lng="+place.getLongitude()+"&username=discoveri");
+        URL url = new URL( "http://api.geonames.org/timezoneJSON?lat="+
+                            place.getLatitude()+"&lng="+place.getLongitude()+
+                            "&username=discoveri" );
         JSONObject joll = getGeonameLatLon(url);
 
         // Convert date to UTC, adjusting for timezone, DST etc.
         LocalDateTime uldt = zone2UTC(ldt,joll.getString("timezoneId"));
         
         // Ok, get sidereal time.
-        return getLocalSiderealHrsDec(uldt,place);
+        return getLocalSiderealHrsDec(place,uldt);
     }
     
     /**
+     * ??
      * Get Local Sidereal Time (LST) in Deg:Min:Sec
      * 
      * @param place
@@ -400,7 +436,7 @@ public class TimeScale
         LocalDateTime uldt = zone2UTC(ldt,joll.getString("timezoneId"));
         
         // Ok, get sidereal time.
-        return getLocalSiderealDegDec(uldt,place);
+        return getLocalSiderealDegDec(place,uldt);
     }
     
     /*
@@ -418,17 +454,17 @@ public class TimeScale
      * (Note: Convert from zoned datetime to localdatetime using zone2UTC()).
      * 
      * @param ldtUTC The local datetime in UTC
-     * @param place Note longitude E is positive, W is negative, latitude N is positive, S is negative.
+     * @param place 
      * @return degrees decimal
      */
-    public static double getLocalSiderealDegDec( LocalDateTime ldtUTC, LatLon place )
+    public static double getLocalSiderealDegDec( LatLon place, LocalDateTime ldtUTC )
     {
         double mjdt = modJulDayTime(ldtUTC)-0.5;
         // Simple calculation for sidereal (degrees)
         double du = (double)ldtUTC.getHour()+(double)ldtUTC.getMinute()/60.d;
         double theta = 100.46 + 0.985647 * mjdt + place.getLongitude() + du * 15.d;
         
-        // Southern latitude correction
+        // Southern latitude correction  **** Is this correct?
         if( place.getLatitude() < 0.d ) theta += 180.d;
 
         return Util.mod( theta, 360.d );
@@ -439,19 +475,33 @@ public class TimeScale
      * Note: Convert from zoned datetime to localdatetime using zone2UTC().
      * 
      * @param ldtUTC The local datetime in UTC
-     * @param place Note N is positive, S is negative; E is positive, W is negative.
+     * @param place 
      * @return hours
      */
-    public static double getLocalSiderealHrsDec( LocalDateTime ldtUTC, LatLon place )
+    public static double getLocalSiderealHrsDec( LatLon place, LocalDateTime ldtUTC )
     {
-        double sid = Util.mod(getLocalSiderealDegDec(ldtUTC,place) / 15.d, 24.d);
+        double sid = Util.mod(getLocalSiderealDegDec(place,ldtUTC) / 15.d, 24.d);
         if( place.getLatitude() < 0.d ) sid += 12.d;
         
         return Util.mod(sid,24.d);
     }
     
+    /**
+     * Returns the current Greenwich sidereal time, as hh:mm:ss.ss.
+     * Note: Convert from zoned datetime to localdatetime using zone2UTC().
+     * 
+     * @param ldtUTC Local datetime in UTC
+     * @param place
+     * @return 
+     */
+    public static String getLocalSiderealHrMinSec( LatLon place, LocalDateTime ldtUTC )
+    {
+        return time2Hhmmss( getLocalSiderealHrsDec(place, ldtUTC) );
+    }
     
-    /*
+    
+    
+    /*  ------------------------------------------------------------------------
      *  =========
      *  T E S T S
      *  =========
@@ -516,7 +566,7 @@ public class TimeScale
         jo = getGeonamePlace(url).getJSONArray("geonames").getJSONObject(0);
         LatLon latlng = new LatLon( Double.parseDouble(jo.getString("lat")),
                                     Double.parseDouble(jo.getString("lng")) );
-        
+
         // Now get timezone from geonames
         System.out.println( placename+" lat/lon: " +latlng );
         url = new URL( "http://api.geonames.org/timezoneJSON?lat="+
@@ -529,12 +579,15 @@ public class TimeScale
         System.out.println( placename+" "+ldt.getHour()+":"+ldt.getMinute()+":"+ldt.getSecond()+" in UTC: " +uldt );
         
         // Ok, get sidereal time.
+        double stime = getLocalSiderealHrsDec(latlng,uldt);
         System.out.println( placename+">> LST: " +
-                df.format( getLocalSiderealHrsDec(uldt,latlng)) );
+                df.format(stime)+"/"+time2Hhmmss(stime) );
     }
     
     /*
-     * Run some timezone tests
+     * Run some timezone tests.
+     *
+     * LSTs all good!
      */
     private static void timezoneTests()
             throws Exception
@@ -547,7 +600,7 @@ public class TimeScale
 
         System.out.println("Julian Day number (quae.nl)[2526.91667]: " +df.format(modJulDayTime(ldt)));
         //... Sidereal time
-        double lst = getLocalSiderealDegDec(ldt,new LatLon(0.d,-5.d));
+        double lst = getLocalSiderealDegDec(new LatLon(0.d,-5.d),ldt);
         System.out.println("Random>> Sidereal time 1 Dec 2006 23:00, lon 5degW (quae.nl)[45.61655deg/3.0411h]: " +df.format(lst)+"deg/"+df.format(lst/15.d)+"h");
         System.out.println("");
         
@@ -597,18 +650,70 @@ public class TimeScale
         //-----------------------------------------------------------------------------------------------------------------
         System.out.println("\r\nExpect: 1:06:36/1.11");
         siderealTest( "Stanley, Falkland Islands", LocalDateTime.of(LocalDate.of(1972,1,13), LocalTime.of(6,30,0)) );
+
+        //... *** Southern hemisphere Test for Stanley, Falkland Islands 13Jan1972 6:30 (Ken Ward, trans4mind 1:06:36/1.11)
+        //        === Wrong! He assumed DST when it wasn't operating in the Falklands in 1972
+        //            [https://www.timeanddate.com/time/change/falkland/stanley?year=1972] ===
+        //-----------------------------------------------------------------------------------------------------------------
+        System.out.println("\r\nExpect: 14:06:40");
+        siderealTest( "Stanley, Falkland Islands", LocalDateTime.of(LocalDate.of(1972,1,13), LocalTime.of(6,30,0)) );
         
+        //... Test for Idaho City, USA, 18Jul1963 14:18 (Ken Ward, trans4mind 09:18:34)
+        //-----------------------------------------------------------------------------
+        System.out.println("\r\nExpect: 09:18:34/9.30944");
+        siderealTest( "Idaho City, USA", LocalDateTime.of(LocalDate.of(1963,7,18), LocalTime.of(14,18,0)) );
+        
+        // Test for 3 Oct 1990 00:00 Berlin, Germany (astrologerdsbaquila.com, 0h:39m:6.419s/0.65178306)
+        //----------------------------------------------------------------------------------------------
+//        System.out.println("\r\nExpect: 0h:39m:6.419s/0.65178306");
+//        TimeScale.siderealTest( "Berlin, Germany", LocalDateTime.of(LocalDate.of(1990,10,3), LocalTime.of(0,0,0)) );
+        
+        //        // Test for 3 Oct 1990 00:00 Berlin, Germany (astrologerdsbaquila.com, 0h:39m:6.419s/0.65178306)
+//        // ---------------------------------------------------------------------------------------------
+//        System.out.println("\r\nExpect: 0h:39m:6.419s/0.65178306");
+//        siderealTest( "Berlin, Germany", LocalDateTime.of(LocalDate.of(1990,10,3), LocalTime.of(0,0,0)) );
+
+        // Test for 3 Oct 1990 00:00 Berlin, Germany (astrologerdsbaquila.com, 0h:39m:6.419s/0.65178306)
+        // ---------------------------------------------------------------------------------------------
+//        System.out.println("\r\nExpect: 19h:03m:08s");
+//        siderealTest( "Rome, Italy", LocalDateTime.of(LocalDate.of(1982,1,15), LocalTime.of(11,35,0)) );
+//        System.out.println("lst: " +time2Hhmmss(19.05459));
+
         //... Test for Enschede, Netherlands, 2Nov2016 21:17:30 (radixpro.com)
         // neoprogrammics.com: 23.5871639662
         //--------------------------------------------------------------------
-        System.out.println("\r\nExpect (radixpro.com): 0:35:23.6/0.5899018653 (NB: neoprogrammics.com: 23.5871639662)");
-        siderealTest( "Enschede, Netherlands", LocalDateTime.of(LocalDate.of(2016,11,2), LocalTime.of(21,17,30)) );
+//        System.out.println("\r\nExpect (radixpro.com): 0:35:23.6/0.5899018653 (NB: neoprogrammics.com: 23.5871639662)");
+//        siderealTest( "Enschede, Netherlands", LocalDateTime.of(LocalDate.of(2016,11,2), LocalTime.of(21,17,30)) );
         
         //... Test for Gaborone, Botswana, 30Sep1966 0:0:0
-        // ?
+        // Astrodienst
         //--------------------------------------------------------------------
-        System.out.println("\r\nExpect ?");
-        siderealTest( "Gaborone, Botswana", LocalDateTime.of(LocalDate.of(1966,9,30), LocalTime.of(0,0)) );
+        System.out.println("\r\nExpect 0:16:30");
+        siderealTest( "Gaborone, Botswana", LocalDateTime.of(LocalDate.of(1966,9,30), LocalTime.MIDNIGHT) );
+        
+        //... Test for Manaus, Brazil, 8Jul1961 20:09
+        // Astrology Math Made Easy
+        //--------------------------------------------------------------------
+        System.out.println("\r\nExpect 15:15:42");
+        siderealTest( "Manaus,Brazil", LocalDateTime.of(LocalDate.of(1961,7,8), LocalTime.of(20,9)) );
+        
+        //... Test for Karos, South Africa 15May1982 02:22
+        // Astrology Math Made Easy
+        //--------------------------------------------------------------------
+        System.out.println("\r\nExpect 17:17:58");
+        siderealTest( "Karos, South Africa", LocalDateTime.of(LocalDate.of(1982,5,15), LocalTime.of(2,22)) );
+
+        //... Test for Chicago, Illinois, 22Jun1954 00:44
+        // Astrology Math Made Easy
+        //--------------------------------------------------------------------
+        System.out.println("\r\nExpect 21:38:31 (neoprogrammics)");
+        siderealTest( "Chicago, USA", LocalDateTime.of(LocalDate.of(1954,6,22), LocalTime.of(4,29)) );
+
+        //... Test for Castellon de la Plana, 1Jan2000 12:00
+        // Astrology Math Made Easy
+        //--------------------------------------------------------------------
+        System.out.println("\r\nExpect 21:38:31 (neoprogrammics)");
+        siderealTest( "Castellon de la Plana, Spain", LocalDateTime.of(LocalDate.of(2000,1,1), LocalTime.of(12,00)) );
     }
 
     
@@ -621,37 +726,16 @@ public class TimeScale
     public static void main(String[] args)
             throws Exception
     {
-//        // Test for 3 Oct 1990 00:00 Berlin, Germany (astrologerdsbaquila.com, 0h:39m:6.419s/0.65178306)
-//        // ---------------------------------------------------------------------------------------------
-//        System.out.println("\r\nExpect: 0h:39m:6.419s/0.65178306");
-//        siderealTest( "Berlin, Germany", LocalDateTime.of(LocalDate.of(1990,10,3), LocalTime.of(0,0,0)) );
-
+        //... Test for Castellon de la Plana, 1Jan2000 12:00
+        // Astrology Math Made Easy
+        //--------------------------------------------------------------------
+        System.out.println("\r\nExpect 17:41:32");
+        siderealTest( "Castellon de la Plana, Spain", LocalDateTime.of(LocalDate.of(2000,1,1), LocalTime.of(12,00)) );
         // DeltaT and LST testing
 //        deltatTests();
-
-        // Julian day testing
-//        try
-//        {
-//            System.out.println("\r\nJulian day tests...");
-//            julDayTests();
-//        }
-//        catch( Exception ex )
-//        {
-//            System.out.println("Expected error: " +ex.getMessage() );
-//        }
         
         // TimeZone checks
-        System.out.println("\r\nTimezone tests...");
-        timezoneTests();
-        
-//        LatLon place = new LatLon(5.d,-20.810694d);
-//        LocalDateTime ldtUTC = LocalDateTime.of(LocalDate.of(2008,9,21), LocalTime.of(22, 15));
-//        double lst = getLocalSiderealDegDec( ldtUTC, place );
-//        System.out.println("lst: " +lst);
-//        
-//        place = new LatLon(5.d,0.d);
-//        ldtUTC = LocalDateTime.of(LocalDate.of(1994,6,16), LocalTime.of(18,0));
-//        lst = getLocalSiderealDegDec( ldtUTC, place );
-//        System.out.println("lst: " +lst);
+//        System.out.println("\r\nTimezone tests...");
+//        timezoneTests();
     }
 }
