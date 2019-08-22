@@ -22,8 +22,9 @@ public class CuspPlusAngle
     private ZodiacHouse                 zh;
     private ZhAttribute                 attribute;                              // MC, IC, ASC, DSC
     
-    private Map<ZodiacHouse,Integer>    name = ZodiacHouse.getZHNameMap();      // Name to ordering
-    private Map<Integer,ZodiacHouse>    nord = ZodiacHouse.getZHOrderMap();     // Ordering to name
+    // House mappings
+    private final Map<ZodiacHouse,Integer>    name = ZodiacHouse.getZHNameMap();      // Name to ordering
+    private final Map<Integer,ZodiacHouse>    nord = ZodiacHouse.getZHOrderMap();     // Ordering to name
 
     
     /**

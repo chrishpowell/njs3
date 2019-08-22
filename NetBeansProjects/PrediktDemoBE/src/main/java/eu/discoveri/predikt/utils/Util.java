@@ -137,6 +137,27 @@ public class Util
     }
     
     /**
+     * Convert degrees decimal to hh mm (rounded)
+     * 
+     * @param degdec
+     * @return 
+     */
+    public static int[] dec2ddmm( double degdec )
+    {
+        int dd[]= new int[2];
+        
+        dd[0] = (int)(degdec - Util.mod(degdec,1.0));
+        double mins = (degdec - dd[0])*60.d;
+        double secs = (mins - (int)mins)*60.d;
+        if( secs > 30 )
+            mins += 1.d;
+        
+        dd[1] = (int)mins;
+
+        return dd;
+    }
+    
+    /**
      * Degree triple to radians.
      * 
      * @param deg

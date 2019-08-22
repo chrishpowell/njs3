@@ -20,23 +20,19 @@ public class Constants
     //... Resource path
     public static String        RESOURCEPATH = "/home/chrispowell/NetBeansProjects/PrediktDemoBE/src/main/java/resources/";
     
-    //... Planets
-    public static String        SUN = "Sun";
-    public static String        MERCURY = "Mercury";
-    public static String        VENUS = "Venus";
-    public static String        MARS = "Mars";
-    public static String        JUPITER = "Jupiter";
-    public static String        SATURN = "Saturn";
-    public static String        URANUS = "Uranus";
-    public static String        NEPTUNE = "Neptune";
-    public static String        PLUTO = "Pluto";
-    public static String        MOON = "Moon";
+    // Counts
+    public static int           NUMHOUSESCLASSIC = 12;
+    public static int           NUMMAJORBODIES = 10;                            // See SSBody enum
     
     //... Planet degree 'overlap' and offset (to avoid overlap)
     public static double        POVERLAP = 3.d;
     public static double        POFFSET = 0.15d;
-    // Zodiac image size
-    public static int           SCALEDZ = 35;
+    // Zodiac image scaled size
+    public static double        SCALEDZ = 35.d;
+    // Wheel logo scaled size
+    public static double        SCALEDL = 30.d;
+    // Circled numbers scaled size
+    public static double        SCALEDC = 20.d;
     
     //... Timescale constants
     public static int           TSDAYSINYR = 367;
@@ -110,7 +106,7 @@ public class Constants
      * @see #TROPICAL_YEAR
      * @internal
      */
-    public static final double SIDEREAL_YEAR = 365.25636;
+    public static final double  SIDEREAL_YEAR = 365.25636;
     
     //... Orbital constants
     public static final double  ANORBITDEG = 360.d;                                 // 360 degrees

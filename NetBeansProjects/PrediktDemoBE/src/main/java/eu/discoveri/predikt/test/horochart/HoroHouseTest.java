@@ -21,7 +21,24 @@ import java.util.Map;
  * @email info@astrology.ninja
  */
 public class HoroHouseTest
-{   
+{
+    // 'Empty' map for cusps
+    private static Map<Integer,CuspPlusAngle> cpaMap = new HashMap<Integer,CuspPlusAngle>()
+        {{
+            put(1,new CuspPlusAngle().setAttribute(ZhAttribute.ASC));
+            put(2,new CuspPlusAngle().setAttribute(ZhAttribute.UNDEF));
+            put(3,new CuspPlusAngle().setAttribute(ZhAttribute.UNDEF));
+            put(4,new CuspPlusAngle().setAttribute(ZhAttribute.IC));
+            put(5,new CuspPlusAngle().setAttribute(ZhAttribute.UNDEF));
+            put(6,new CuspPlusAngle().setAttribute(ZhAttribute.UNDEF));
+            put(7,new CuspPlusAngle().setAttribute(ZhAttribute.DSC));
+            put(8,new CuspPlusAngle().setAttribute(ZhAttribute.UNDEF));
+            put(9,new CuspPlusAngle().setAttribute(ZhAttribute.UNDEF));
+            put(10,new CuspPlusAngle().setAttribute(ZhAttribute.MC));
+            put(11,new CuspPlusAngle().setAttribute(ZhAttribute.UNDEF));
+            put(12,new CuspPlusAngle().setAttribute(ZhAttribute.UNDEF));
+        }};
+            
     private static void mcAscTesting()
             throws Exception
     {
@@ -43,7 +60,7 @@ public class HoroHouseTest
             LocalDateTime ldt = v.getUtcDT();
 
             //... Setup (note LST in degrees).  Order is important...
-            HoroHouse hh = new HoroHouse( k, ldt );
+            HoroHouse hh = new HoroHouse( k, ldt, cpaMap );
             
             // 1. Calc obliquity
             hh.calcObliquity(ldt);
@@ -106,9 +123,11 @@ public class HoroHouseTest
     private static void hhTesting()
             throws Exception
     {
-            String  placeName = null;
+        String          placeName = null;
+        LocalDateTime   ldt = null;
+        HoroHouse       hh = null;
         
-        //... Gaborone, Botswana.  This works!
+//... Gaborone, Botswana
 // Should be
 // 1,  23 Gem 17' 10" (ASC)  23°16'31" N
 // 2,  25 Can 20' 33"        21° 4'29" N
@@ -124,24 +143,31 @@ public class HoroHouseTest
 // 12, 29 Tau 50'  0"        20° 7'13" N
         placeName = "Gaborone, Botswana";
         System.out.println("Place: " +placeName);
-        LocalDateTime ldt = LocalDateTime.of(LocalDate.of(1966,9,30), LocalTime.MIDNIGHT);
+        ldt = LocalDateTime.of(LocalDate.of(1966,9,30), LocalTime.MIDNIGHT);
         System.out.println( "Date, time of birth: " +
                 Util.caps(ldt.getDayOfWeek().toString())+ ", " +
                 ldt.toLocalDate().toString()+ " " +
                 ldt.toLocalTime().toString()         );
         
         //... Setup & calc LST
-        HoroHouse hh = new HoroHouse(placeName, ldt).init();
+        hh = new HoroHouse(placeName, ldt, cpaMap).init();
         System.out.println("LST (expect 00:16:30): " + TimeScale.time2Hhmmss(hh.getLST()));
         System.out.println("LatLon: " +hh.getLatLon().fmtLatLonDMS());
         
         // Get the cusps
-        hh.allCusps();
+        hh.setWheel(ChartType.PLACIDUS);
         
         // Rough check for longitudes and houses
         System.out.println("\r\nMC longitude check OK: " +hh.quikLonMCChk(hh.getLST(), hh.getCpaMap().get(10)));
         System.out.println("ASC/MC cross check: " +hh.ascMCHouseChk( hh.getCpaMap().get(1).getHouse(), hh.getCpaMap().get(10).getHouse() ) );
         System.out.println("");
+
+        hh.getCpaMap().forEach((k,v)->{
+            System.out.println("\r\nAngle: " +v.getAngle());
+            System.out.println("Housenum: " +v.getHouseNum());
+            System.out.println("Housename: " +v.getShortName());
+            System.out.println("Key: " +k);
+        });
 
         // Dump cusps
         hh.getCpaMap().forEach((k,v)->{
@@ -195,27 +221,31 @@ public class HoroHouseTest
 // 10, 10 Ari 36' 25" (MC)    4°11'58" N
 // 11, 20 Tau 27' 51"        17°52' 2" N
 // 12,  2 Can 25' 36"        23°25'11" N
-//        LocalDateTime ldt = LocalDateTime.of(LocalDate.of(1990,10,3), LocalTime.of(0,0));
+//        placeName = "Berlin,Germany";
+//        System.out.println("Place: " +placeName);
+//        ldt = LocalDateTime.of(LocalDate.of(1990,10,3), LocalTime.MIDNIGHT);
 //        System.out.println( "Date, time of birth: " +
 //                Util.caps(ldt.getDayOfWeek().toString())+ ", " +
 //                ldt.toLocalDate().toString()+ " " +
 //                ldt.toLocalTime().toString()         );
 //        
 //        //... Setup & calc LST
-//        HoroHouse hh = new HoroHouse("Berlin,Germany", ldt).init();
+//        hh = new HoroHouse(placeName, ldt).init();
 //        System.out.println("LST (expect 0:39:00): " + TimeScale.time2Hhmmss(hh.getLST()));
-//        System.out.println("LatLon (13e21, 52n29): " +hh.getLatLon().fmtLatLonDMS());
+//        System.out.println("LatLon (52n29,13e21): " +hh.getLatLon().fmtLatLonDMS());
 //        System.out.println("");
+//
 //        // Get the cusps
-//        hh.northHemiCusps();
-//        // Rough check for MC long
-//        System.out.println("\r\nMC longitude check OK? " +hh.quikLonMCChk(hh.getLST(), hh.getCpaMap().get(10)));
+//        hh.setWheel(ChartType.PLACIDUS);
+//        
+//        // Rough check for longitudes and houses
+//        System.out.println("\r\nMC longitude check OK: " +hh.quikLonMCChk(hh.getLST(), hh.getCpaMap().get(10)));
+//        System.out.println("ASC/MC cross check: " +hh.ascMCHouseChk( hh.getCpaMap().get(1).getHouse(), hh.getCpaMap().get(10).getHouse() ) );
 //        System.out.println("");
-////        
+//
 //        // Dump cusps
 //        hh.getCpaMap().forEach((k,v)->{
 //            double deg = Math.toDegrees(v.getAngle());
-////            System.out.println("Decl: " +Math.toDegrees(v.getDecl()));
 //            System.out.println( "[" +k+"] "+Util.houseDec2ddmmss(v.getHouse().getShortname(),deg)+"\t"+Util.dec2ddmmss(Math.toDegrees(v.getDecl()),true) );
 //        });
 //------------------------------------------------------------------------------
@@ -234,28 +264,41 @@ public class HoroHouseTest
 // 10, 21 Pis 40' 12" (MC)    3°18'15" S
 // 11, 29 Ari 25' 41"        11°16'18" N
 // 12, 15 Gem 32' 42"        22°39'29" N
-//        LocalDateTime ldt = LocalDateTime.of(LocalDate.of(1990,10,3), LocalTime.of(0,0));
+//        placeName = "Borth,Wales";
+//        System.out.println("Place: " +placeName);
+//        ldt = LocalDateTime.of(LocalDate.of(1990,10,3), LocalTime.MIDNIGHT);
 //        System.out.println( "Date, time of birth: " +
 //                Util.caps(ldt.getDayOfWeek().toString())+ ", " +
 //                ldt.toLocalDate().toString()+ " " +
 //                ldt.toLocalTime().toString()         );
 //        
 //        //... Setup & calc LST
-//        HoroHouse hh = new HoroHouse("Borth,Wales", ldt).init();
+//        hh = new HoroHouse(placeName, ldt, cpaMap).init();
 //        System.out.println("LST (expect 23:29:24): " + TimeScale.time2Hhmmss(hh.getLST()));
-//        System.out.println("LatLon (4w03, 52n29): " +hh.getLatLon().fmtLatLonDMS());
+//        System.out.println("LatLon (52n29,4w03): " +hh.getLatLon().fmtLatLonDMS());
 //        System.out.println("");
+//
 //        // Get the cusps
-//        hh.northHemiCusps();
-//        // Rough check for MC long
-//        System.out.println("\r\nMC longitude check OK? " +hh.quikLonMCChk(hh.getLST(), hh.getCpaMap().get(10)));
+//        hh.setWheel(ChartType.PLACIDUS);
+//        
+//        // Rough check for longitudes and houses
+//        System.out.println("\r\nMC longitude check OK: " +hh.quikLonMCChk(hh.getLST(), hh.getCpaMap().get(10)));
+//        System.out.println("ASC/MC cross check: " +hh.ascMCHouseChk( hh.getCpaMap().get(1).getHouse(), hh.getCpaMap().get(10).getHouse() ) );
 //        System.out.println("");
-////        
+//
 //        // Dump cusps
+////        hh.getCpaMap().forEach((k,v)->{
+////            double deg = Math.toDegrees(v.getAngle());
+////            System.out.println( "[" +k+"] "+Util.houseDec2ddmmss(v.getHouse().getShortname(),deg)+"\t"+Util.dec2ddmmss(Math.toDegrees(v.getDecl()),true) );
+////        });
 //        hh.getCpaMap().forEach((k,v)->{
-//            double deg = Math.toDegrees(v.getAngle());
-//            System.out.println( "[" +k+"] "+Util.houseDec2ddmmss(v.getHouse().getShortname(),deg)+"\t"+Util.dec2ddmmss(Math.toDegrees(v.getDecl()),true) );
+//            System.out.println("\r\nAngle: " +v.getAngle());
+//            System.out.println("Housenum: " +v.getHouseNum());
+//            System.out.println("Housename: " +v.getShortName());
+//            System.out.println("Key: " +k);
 //        });
+//        double adRot = 2.d*Math.PI-hh.getCpaMap().get(1).getAngle();
+//        System.out.println("AscDsc rotate (rads/degs): " +adRot+"/"+Math.toDegrees(adRot));
 //------------------------------------------------------------------------------
 
 //... Riga, Latvia
@@ -290,31 +333,118 @@ public class HoroHouseTest
 // 10, 25 Sco 56' 1" (MC)
 // 11, 13 Sag 44' 42"
 // 12, 29 Sag 52' 20"
-//        LocalDateTime ldt = LocalDateTime.of(LocalDate.of(1990,6,6), LocalTime.of(0,3));
+//        placeName = "Dublin,Ireland";
+//        System.out.println("Place: " +placeName);
+//        ldt = LocalDateTime.of(LocalDate.of(1990,6,6), LocalTime.of(0,3));
 //        System.out.println( "Date, time of birth: " +
 //                Util.caps(ldt.getDayOfWeek().toString())+ ", " +
 //                ldt.toLocalDate().toString()+ " " +
 //                ldt.toLocalTime().toString()         );
 //        
 //        //... Setup & calc LST
-//        HoroHouse hh = new HoroHouse("Dublin, Ireland", ldt).init();
+//        hh = new HoroHouse(placeName, ldt).init();
 //        System.out.println("LST (expect 15:34:26): " + TimeScale.time2Hhmmss(hh.getLST()));
-//        System.out.println("LatLon (6w15, 53n20): " +hh.getLatLon().fmtLatLonDMS());
+//        System.out.println("LatLon (53n20,6w15): " +hh.getLatLon().fmtLatLonDMS()+"/"+ hh.getLatLon().toString());
 //        System.out.println("");
+//
 //        // Get the cusps
-//        hh.northHemiCusps();
-//        // Rough check for MC long
-//        System.out.println("\r\nMC longitude check OK? " +hh.quikLonMCChk(hh.getLST(), hh.getCpaMap().get(10)));
+//        hh.setWheel(ChartType.PLACIDUS);
+//        
+//        // Rough check for longitudes and houses
+//        System.out.println("\r\nMC longitude check OK: " +hh.quikLonMCChk(hh.getLST(), hh.getCpaMap().get(10)));
+//        System.out.println("ASC/MC cross check: " +hh.ascMCHouseChk( hh.getCpaMap().get(1).getHouse(), hh.getCpaMap().get(10).getHouse() ) );
 //        System.out.println("");
-////        
+//
 //        // Dump cusps
 //        hh.getCpaMap().forEach((k,v)->{
 //            double deg = Math.toDegrees(v.getAngle());
-////            System.out.println("Decl: " +Math.toDegrees(v.getDecl()));
 //            System.out.println( "[" +k+"] "+Util.houseDec2ddmmss(v.getHouse().getShortname(),deg)+"\t"+Util.dec2ddmmss(Math.toDegrees(v.getDecl()),true) );
 //        });
 //------------------------------------------------------------------------------
-
+//... Enschede, Holland
+// Should be
+// 1,  22 Can 30' 58" (ASC) 21°33'16" N
+// 2,   8 Leo  2' 54"       18°15'  5" N
+// 3,  27 Leo  0' 38"       12°30'22" N
+// 4,  23 Vir  7'  2" (IC)   2°43'54" N
+// 5,   1 Sco  2' 28"       11°50'  2" S
+// 6,  16 Sag 40' 57"       22°46'  7" S
+// 7,  22 Cap 30' 58" (DSC) 21°33'16" S
+// 8,   8 Aqu  2' 54"       18°15'  5" S
+// 9,  27 Aqu  0' 38"       12°30'22" S
+// 10, 23 Pis  7'  2"(MC)    2°43'54" S
+// 11,  1 Tau  2' 28"       11°50'  2" N
+// 12, 16 Gem 40' 57"       22°46'  7" N
+//        placeName = "Enschede,Holland";
+//        System.out.println("Place: " +placeName);
+//        ldt = LocalDateTime.of(LocalDate.of(2016,11,2), LocalTime.of(21,17,30));
+//        System.out.println( "Date, time of birth: " +
+//                Util.caps(ldt.getDayOfWeek().toString())+ ", " +
+//                ldt.toLocalDate().toString()+ " " +
+//                ldt.toLocalTime().toString()         );
+//        
+//        //... Setup & calc LST
+//        hh = new HoroHouse(placeName, ldt).init();
+//        System.out.println("LST (expect 23:34:43): " + TimeScale.time2Hhmmss(hh.getLST()));
+//        System.out.println("LatLon (53n13,6e54): " +hh.getLatLon().fmtLatLonDMS() +"/"+ hh.getLatLon().toString());
+//        System.out.println("");
+//
+//        // Get the cusps
+//        hh.setWheel(ChartType.PLACIDUS);
+//        
+//        // Rough check for longitudes and houses
+//        System.out.println("\r\nMC longitude check OK: " +hh.quikLonMCChk(hh.getLST(), hh.getCpaMap().get(10)));
+//        System.out.println("ASC/MC cross check: " +hh.ascMCHouseChk( hh.getCpaMap().get(1).getHouse(), hh.getCpaMap().get(10).getHouse() ) );
+//        System.out.println("");
+//
+//        // Dump cusps
+//        hh.getCpaMap().forEach((k,v)->{
+//            double deg = Math.toDegrees(v.getAngle());
+//            System.out.println( "[" +k+"] "+Util.houseDec2ddmmss(v.getHouse().getShortname(),deg)+"\t"+Util.dec2ddmmss(Math.toDegrees(v.getDecl()),true) );
+//        });
+//------------------------------------------------------------------------------
+//... Recife, Brazil
+// Should be
+// 1,  27 Leo 27' 12" (ASC) 12°21'22" N
+// 2,   1 Lib 37'  9"        0°38'38" S
+// 3,   4 Sco 18' 20"       12°57'17" S
+// 4,   3 Sag 26' 53" (IC)  20°50'34" S
+// 5,   0 Cap 13' 54"       23°26'16" S
+// 6,  27 Cap 19' 16"       20°41'41" S
+// 7,  27 Aqu 27' 12" (DSC) 12°21'22" S
+// 8,   1 Ari 37'  9"        0°38'38" N
+// 9,   4 Tau 18' 20"       12°57'17" N
+// 10,  3 Gem 26' 53"(MC)   20°50'34" N
+// 11,  0 Can 13' 54"       23°26'16" N
+// 12, 27 Can 19' 16"       20°41'41" N
+//        placeName = "Recife,Brazil";
+//        System.out.println("Place: " +placeName);
+//        ldt = LocalDateTime.of(LocalDate.of(2000,5,5), LocalTime.of(12,30));
+//        System.out.println( "Date, time of birth: " +
+//                Util.caps(ldt.getDayOfWeek().toString())+ ", " +
+//                ldt.toLocalDate().toString()+ " " +
+//                ldt.toLocalTime().toString()         );
+//        
+//        //... Setup & calc LST
+//        hh = new HoroHouse(placeName, ldt).init();
+//        System.out.println("LST (expect 4:05:42): " + TimeScale.time2Hhmmss(hh.getLST()));
+//        System.out.println("LatLon (8s03,34w52): " +hh.getLatLon().fmtLatLonDMS() +"/"+ hh.getLatLon().toString());
+//        System.out.println("");
+//
+//        // Get the cusps
+//        hh.setWheel(ChartType.PLACIDUS);
+//        
+//        // Rough check for longitudes and houses
+//        System.out.println("\r\nMC longitude check OK: " +hh.quikLonMCChk(hh.getLST(), hh.getCpaMap().get(10)));
+//        System.out.println("ASC/MC cross check: " +hh.ascMCHouseChk( hh.getCpaMap().get(1).getHouse(), hh.getCpaMap().get(10).getHouse() ) );
+//        System.out.println("");
+//
+//        // Dump cusps
+//        hh.getCpaMap().forEach((k,v)->{
+//            double deg = Math.toDegrees(v.getAngle());
+//            System.out.println( "[" +k+"] "+Util.houseDec2ddmmss(v.getHouse().getShortname(),deg)+"\t"+Util.dec2ddmmss(Math.toDegrees(v.getDecl()),true) );
+//        });
+//------------------------------------------------------------------------------
 //... Dublin, Ireland
 //        LocalDateTime ldt = LocalDateTime.of(LocalDate.of(1990,6,6), LocalTime.of(23,57));
 //        

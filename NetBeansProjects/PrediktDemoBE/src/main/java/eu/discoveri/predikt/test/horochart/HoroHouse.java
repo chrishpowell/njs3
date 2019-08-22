@@ -8,10 +8,7 @@ import eu.discoveri.predikt.utils.*;
 import java.io.IOException;
 import java.net.MalformedURLException;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
-import java.util.HashMap;
 import java.util.Map;
 
 
@@ -23,42 +20,22 @@ import java.util.Map;
  */
 public class HoroHouse
 {
+    // Statics
+    private static double           sinTilt, cosTilt;                           // Earth tilt
     // Class attributes
     private double                  tilt, tiltRads,
-                                    sinTilt, cosTilt,                           // Earth tilt
                                     latRads, lngRads,
                                     declMC, declMCRads,
                                     declAsc, declAscRads,
                                     ascMod, ascRads,                            // Ascendant
                                     lst,                                        // Local Sideral Time
                                     ramcRads, mcRads;
-    private static double           cusp2Rads,
-                                    cusp3Rads,
-                                    cusp11Rads,
-                                    cusp12Rads;
     private final LocalDateTime     ldt;                                        // Birth date
     private LatLon                  place;
     private final String            placeName;
 
-    
-    /*
-     * Create the cusps
-     */
-    private final Map<Integer,CuspPlusAngle> cpaMap = new HashMap<Integer,CuspPlusAngle>()
-    {{
-        put(1,new CuspPlusAngle().setAttribute(ZhAttribute.ASC));
-        put(2,new CuspPlusAngle().setAttribute(ZhAttribute.UNDEF));
-        put(3,new CuspPlusAngle().setAttribute(ZhAttribute.UNDEF));
-        put(4,new CuspPlusAngle().setAttribute(ZhAttribute.IC));
-        put(5,new CuspPlusAngle().setAttribute(ZhAttribute.UNDEF));
-        put(6,new CuspPlusAngle().setAttribute(ZhAttribute.UNDEF));
-        put(7,new CuspPlusAngle().setAttribute(ZhAttribute.DSC));
-        put(8,new CuspPlusAngle().setAttribute(ZhAttribute.UNDEF));
-        put(9,new CuspPlusAngle().setAttribute(ZhAttribute.UNDEF));
-        put(10,new CuspPlusAngle().setAttribute(ZhAttribute.MC));
-        put(11,new CuspPlusAngle().setAttribute(ZhAttribute.UNDEF));
-        put(12,new CuspPlusAngle().setAttribute(ZhAttribute.UNDEF));
-    }};
+    // Cusps
+    private Map<Integer,CuspPlusAngle>    cpaMap;
 
 
     /**
@@ -66,11 +43,13 @@ public class HoroHouse
      * 
      * @param placename
      * @param localdatetime
+     * @param cpamap Map for cusps.
      */
-    public HoroHouse( String placename, LocalDateTime localdatetime )
+    public HoroHouse( String placename, LocalDateTime localdatetime, Map<Integer,CuspPlusAngle> cpamap )
     {
         this.placeName = placename;
         this.ldt = localdatetime;
+        this.cpaMap = cpamap;
     }
 
     /**
@@ -209,7 +188,7 @@ public class HoroHouse
     public void calcMC()
     {
         // Midheaven = arctan(tan(thetaL)/cos(eps))
-        mcRads = Math.atan2(Math.tan(ramcRads),cosTilt);
+        mcRads = Math.atan(Math.tan(ramcRads)/cosTilt);
         
         // Adjust quadrant
         if( ramcRads >= Math.PI/2.d && ramcRads < 3.d*Math.PI/2.d )
@@ -220,7 +199,11 @@ public class HoroHouse
     }
     
     /**
-     * (The ascendant is the sign on the Eastern horizon when the birth occurred)
+     * The ascendant is the sign on the Eastern horizon when the birth occurred.
+     * The degree (and ultimately, the house/sign) that is ascending on the
+     * Eastern horizon at a given time, usually the birth date/time.  It is the
+     * geocentric Ecliptic or Celestial Longitude (lambda) as outlined in:
+     * https://en.wikipedia.org/wiki/Ecliptic_coordinate_system#Spherical_coordinates.
      *
      * Be aware that with latitudes north/south of Arctic/Antarctic circles,
      * there are discontinuities, hence applied limit.
@@ -296,69 +279,12 @@ public class HoroHouse
      * @param lon longitude (rads)
      * @return declination (rads)
      */
-    public double declination( double lon )
+    public static double declination( double lon )
     {
         // arcsin(sin(zodiacLong)*sin(Obliq))
         return Math.asin(Math.sin(lon) * sinTilt);
     }
-    
-    /**
-     * 4. 11th/12th house cusp
-     * See: http://vytautus.com/files/File/pamoka.pdf and Hugh Rice "American Astrology tables ofHouses"
-     * 
-     * @param ramcrads
-     * @param f
-     * @param offset
-     * @return 
-     */
-    public double houseCusp1112RA( double ramcrads, double f, double offset )
-    {
-        double ra1 = ramcrads+offset;
-        double ra0 = Double.MIN_VALUE;
-        double tiltxLat = Math.tan(tiltRads)*Math.tan(latRads);
-        
-        while(true)
-        {
-            ra0 = ramcrads + Math.acos(-Math.sin(ra1)*tiltxLat) / f;
-            if( Math.abs(ra0-ra1) < Constants.CUSPCONVERGE ) break;
-            ra1 = ra0;
-        }
-            
-        // 'Final' RA (unlikely ever to exceed 180.?)
-        if( ra0 > Math.PI/2.d )
-            return ra0 - Math.PI;
-        else
-            return ra0;
-    }
-    
-    /**
-     * 5. 2nd/3rd house cusp
-     * See: http://vytautus.com/files/File/pamoka.pdf and Hugh Rice "American Astrology tables ofHouses"
-     * 
-     * @param ramcrads
-     * @param f
-     * @param offset
-     * @return 
-     */
-    public double houseCusp23RA( double ramcrads, double f, double offset )
-    {
-        double ra1 = ramcrads+offset;
-        double ra0 = Double.MIN_VALUE;
-        double tiltxLat = Math.tan(tiltRads)*Math.tan(latRads);
-        
-        while(true)
-        {
-            ra0 = ramcrads + Math.PI - (Math.acos(Math.sin(ra1)*tiltxLat)) / f;
-            if( Math.abs(ra0-ra1) < Constants.CUSPCONVERGE ) break;
-            ra1 = ra0;
-        }
 
-        // 'Final' RA (unlikely ever to exceed 180.?)
-        if( ra0 > Math.PI/2.d )
-            return ra0 - Math.PI;
-        else
-            return ra0;
-    }
     
     /**
      * 6. Convert final RA to longitude (rads):
@@ -367,26 +293,34 @@ public class HoroHouse
      * @param ra
      * @return 
      */
-    public double ra2Longitude( double ra )
+    public static double ra2Longitude( double ra )
     {
         double longitude = Math.atan(Math.tan(ra)/cosTilt);
-        // Is positive value always correct?
+//        System.out.println("..> Initial longitude (rads/degs): " +longitude +"/"+ Math.toDegrees(longitude));
+//        System.out.println("..> RA, tan RA: " +ra+ ", " +Math.tan(ra));
+        
+        // Make positive
         if( longitude < 0.d )
-            return longitude + Math.PI;
-        else
-            return longitude;
+            { longitude += Math.PI; }
+
+        /*
+         * Input ra is very nearly in the right place (compare ra and initial
+         * longitude). But atan(tan(ra)) can 'move' longitude into wrong
+         * quadrant by 180.  Move it back.
+         */
+        if( ra > Math.PI && ra <= 2*Math.PI )
+            { longitude += Math.PI; }
+        
+//        System.out.println("ret long (rads/degs): " +longitude+"/"+Math.toDegrees(longitude));
+        return longitude;
     }
 
-
     /**
-     * Determine all cusps
-     * -------------------
+     * Create the house wheel.
+     * @param ct 
      */
-    public void allCusps()
+    public void setWheel( ChartType ct )
     {
-        // Populate cusps
-        // --------------
-
         // 10th house cusp (MC)
         // 1st. Convert Local Sidereal Time (LST) to Right Ascension of the MC (RAMC)
         calcRAMC();                                                 // ramc used a lot...
@@ -399,94 +333,15 @@ public class HoroHouse
         //    Declination = arcsin [sin(zodiacal longitude) x sin e]
         calcMCDecl();
         calcASCDecl();
-
-        // 2nd. MC = arctan (tan RAMC/cos e)
-        // Set cusp, we don't use ra2longitude() here
-        CuspPlusAngle cpa10 = cpaMap.get(ZhAttribute.MCN).evenAngleHouse(mcRads);
-        cpa10.setDeclRads(declMC);
-
-        // 1st house cusp (ASC)
-        // 3. Asc = arccot {-[(tan L x sin e) + (sin RAMC x cos e)]/cos RAMC}
-        // Set cusp, we don't use ra2longitude() here
-        CuspPlusAngle cpa1 = cpaMap.get(ZhAttribute.ASCN).evenAngleHouse(ascRads);
-        cpa1.setDeclRads(declAsc);
         
-        // 11th house cusp
-        //   RA1 = RAMC+30 degrees
-        //   RA2 = RAMC+{arcos[-(sin RA1) x (tan e) x (tan L)]}/3
-        //   :
-        //   Etc until delta RA tends to zero
-        cusp11Rads = houseCusp1112RA( ramcRads, 3.d, Math.PI/6.d );
-        // Get this (empty-ish) cusp
-        CuspPlusAngle cpa11 = cpaMap.get(11);
-        // Enter up angle in House
-        cpa11.evenAngleHouse(ra2Longitude(cusp11Rads));
-        // Set declination
-        cpa11.setDeclRads(declination(cpa11.getAngle()+cpa11.getHouse().getRadStart()));
-        
-        // 12th house cusp
-        //   RA1 = RAMC+60 degrees
-        //   RA2 = RAMC+{arcos[-(sin RA1) x (tan e) x (tan L)]}/1.5
-        //   :
-        //   Etc until delta RA tends to zero
-        cusp12Rads = houseCusp1112RA( ramcRads, 1.5d, Math.PI/3.d );
-        // Get this (empty-ish) cusp
-        CuspPlusAngle cpa12 = cpaMap.get(12);
-        // Enter up angle in House
-        cpa12.evenAngleHouse(ra2Longitude(cusp12Rads));
-        // Set declination
-        cpa12.setDeclRads(declination(cpa12.getAngle()+cpa12.getHouse().getRadStart()));
-        
-        // 2nd house cusp
-        //   RA1 = RAMC+120 degrees
-        //   RA2 = RAMC + 180 – {arcos[(sin RA1) x (tan e) x (tan L)]}/1.5
-        //   :
-        //   Etc until delta RA tends to zero
-        cusp2Rads = houseCusp23RA( ramcRads, 1.5d, 2*Math.PI/3.d );
-
-        // Get this (empty-ish) cusp
-        CuspPlusAngle cpa2 = cpaMap.get(2);
-        // Enter up angle in House
-        cpa2.evenAngleHouse(ra2Longitude(cusp2Rads));
-        // Set declination
-        cpa2.setDeclRads(declination(cpa2.getAngle()+cpa2.getHouse().getRadStart()));
-                
-        // 3rd house cusp
-        //    RA1 = RAMC+150 degrees
-        //    RA2 = RAMC + 180 – {arcos[(sin RA1) x (tan e) x (tan L)]}/3
-        //    :
-        //    Etc until delta RA tends to zero
-        cusp3Rads = houseCusp23RA( ramcRads, 3.d, 5*Math.PI/6.d );
-
-        // Get this (empty-ish) cusp
-        CuspPlusAngle cpa3 = cpaMap.get(3);
-        // Enter up angle in House
-        cpa3.evenAngleHouse(ra2Longitude(cusp3Rads));
-        // Set declination
-        cpa3.setDeclRads(declination(cpa3.getAngle()+cpa3.getHouse().getRadStart()));
-        
-        
-        // 12. Alternate cusps are simply the opposite signs
-        // -------------------------------------------------
-        // 3 -> 9
-        cpaMap.get(9).setOppositeCusp(cpa3);
-        
-        // 2 -> 8
-        cpaMap.get(8).setOppositeCusp(cpa2);
-        
-        // 1 -> 7
-        cpaMap.get(ZhAttribute.DSCN).setOppositeCusp(cpa1);
-        
-        // 10 -> 4
-        cpaMap.get(ZhAttribute.ICN).setOppositeCusp(cpa10);
-        
-        // 11 -> 5
-        cpaMap.get(5).setOppositeCusp(cpa11);
-        
-        // 12 -> 6
-        cpaMap.get(6).setOppositeCusp(cpa12);
+        switch( ct )
+        {
+            default:
+            case PLACIDUS:
+                PlacidusWheel pw = new PlacidusWheel( tiltRads, latRads );
+                pw.determineCusps(cpaMap, ramcRads, mcRads, ascRads, declMC, declAsc);
+        }
     }
-    
     
     /*
      * Getters

@@ -357,7 +357,7 @@ public class TimeScale
         
         // Parse input string
         place = place.trim();                                                   // Get rid of some spaces
-        String[] subps = place.split(",");                                     // First is city/town etc., last is country
+        String[] subps = place.split(",");                                      // First is city/town etc., last is country
         
         // Encode the query (and yep NOT the BASESTR or POSTSTR)
         String qquery = URLEncoder.encode(place, StandardCharsets.UTF_8.toString());
