@@ -7,7 +7,7 @@ package eu.discoveri.predikt.planets;
  *
  * @author Chris Powell, Discoveri OU
  */
-public interface Planet
+public interface NOTUSED
 {
     void dumpPlanet();
 }

@@ -18,7 +18,7 @@ import javafx.geometry.Point3D;
  * @author Chris Powell, Discoveri OU
  * @email info@astrology.ninja
  */
-public abstract class Orbits implements Planet
+public abstract class Orbits implements NOTUSED
 {
     // Input values
     private double          bigOmegaInit,

@@ -26,17 +26,20 @@ public class Constants
     
     //... Planet degree 'overlap' and offset (to avoid overlap)
     public static double        POVERLAP = 3.d;
-    public static double        POFFSET = 0.15d;
+    public static double        POFFSET = 30.d;
+    // Plaent plot size
+    public static int           SCALEDP = 35;
     // Zodiac image scaled size
-    public static double        SCALEDZ = 35.d;
+    public static int           SCALEDZ = 35;
     // Wheel logo scaled size
-    public static double        SCALEDL = 30.d;
+    public static int           SCALEDL = 30;
     // Circled numbers scaled size
-    public static double        SCALEDC = 20.d;
+    public static int           SCALEDC = 20;
     
     //... Timescale constants
     public static int           TSDAYSINYR = 367;
     public static int           TSOFFSET = 730515;
+    public static double        JDOFFSETCLASSIC = 0.5;
     public static double        MJD1JAN2000ZERO = 51544.d;
     public static double        JD1JAN2000ZERO = 2451545.d;
     public static double        JULDAYSPERC = 36525.d;

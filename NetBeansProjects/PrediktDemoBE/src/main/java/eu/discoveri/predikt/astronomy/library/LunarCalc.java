@@ -164,7 +164,8 @@ public class LunarCalc
      *
      * @return The summary string
      */
-    public static String summary(ObsInfo oi) {
+    public static String summary(ObsInfo oi)
+    {
         GregorianCalendar now = new GregorianCalendar();
 
         double age = ageOfMoonInDays(now);
@@ -191,9 +192,6 @@ public class LunarCalc
         if (rs.b >= 0.) {
             info += setSpace + "Sets " + TimeOps.formatTime(rs.b);
         }
-        /**
-         * 
-         */
 
         return info;
     }
@@ -207,7 +205,8 @@ public class LunarCalc
      *
      * @return The summary string
      */
-    public static String summaryPHL() {
+    public static String summaryPHL()
+    {
         return summary(new ObsInfo(new Latitude(39.95), new Longitude(-75.16)))
                 + " (Phila, PA)";
     }
@@ -216,14 +215,16 @@ public class LunarCalc
     // calculate the difference between lunar and solar ecliptic longitudes
     // at the given time
     //
-    private static double calcDiff(PlanetData pd, double jd, ObsInfo loc) {
+    private static double calcDiff(PlanetData pd, double jd, ObsInfo loc)
+    {
         return pd.calcLon(Planets.LUNA, jd, loc) - pd.calcLon(Planets.EARTH, jd, loc);
     }
     //-------------------------------------------------------------------------
     // returns true if the two angles are NOT in the same quadrant
     //
 
-    private static boolean quadDiff(double a1, double a2) {
+    private static boolean quadDiff(double a1, double a2)
+    {
         return AstroOps.quadrant(a1) != AstroOps.quadrant(a2);
     }
     //-------------------------------------------------------------------------
@@ -239,21 +240,25 @@ public class LunarCalc
      *
      * @return The relatively exact time
      */
-    public static double quarterChange(double jd, ObsInfo loc) {
+    public static double quarterChange(double jd, ObsInfo loc)
+    {
         double longitude[] = new double[Astro.IHOURS_PER_DAY + 1];    // 24 hrs + 1
         PlanetData pd = new PlanetData();
 
         // Compute the longitudes for each hour:
         //
-        for (int i = 0; i <= Astro.IHOURS_PER_DAY; i++) {
+        for (int i = 0; i <= Astro.IHOURS_PER_DAY; i++)
+        {
             longitude[i] = calcDiff(pd, jd + AstroOps.toDays(i), loc);
         }
 
         double fraction = -1.;
         // Scan the hours, looking for quadrant change:
         //
-        for (int i = 0; i < Astro.IHOURS_PER_DAY; i++) {
-            if (quadDiff(longitude[i + 1], longitude[i])) {
+        for (int i = 0; i < Astro.IHOURS_PER_DAY; i++)
+        {
+            if (quadDiff(longitude[i + 1], longitude[i]))
+            {
                 // we found a quadrant change to refine
 
                 double delta = 1.;
@@ -277,19 +282,25 @@ public class LunarCalc
         return fraction;
     }
 
+
     /**
-     * (for unit testing only)
+     *--------------------------------------------------------------------------
+     *  M A I N
+     * -------------------------------------------------------------------------
      */
-    public static void main(String args[]) {
+    public static void main(String args[])
+    {
         System.out.println("LunarCalc Test");
 
         // Note: Calendar.JANUARY = 0
         GregorianCalendar gc = new GregorianCalendar();
-        for (int i = 11; i < 17; i++) {
+        for (int i = 11; i < 17; i++)
+        {
             gc.set(2002, Calendar.MARCH, i);
             System.out.println("Lunation on 3/" + i + ": " + lunation(gc));
         }
-        for (int i = 9; i < 16; i++) {
+        for (int i = 9; i < 16; i++)
+        {
             gc.set(2002, Calendar.APRIL, i);
             System.out.println("Lunation on 4/" + i + ": " + lunation(gc));
         }
@@ -309,5 +320,4 @@ public class LunarCalc
     System.out.println( "Q3: " + TimeOps.formatTime( quarterChange( jdQ3, oi ) ) );
          */
     }
-
-}   // end class LunarCalc
+}

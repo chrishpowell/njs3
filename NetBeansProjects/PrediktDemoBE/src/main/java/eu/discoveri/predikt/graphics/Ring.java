@@ -3,9 +3,18 @@
  */
 package eu.discoveri.predikt.graphics;
 
+import eu.discoveri.predikt.astronomy.library.Latitude;
+import eu.discoveri.predikt.astronomy.library.Longitude;
+import eu.discoveri.predikt.astronomy.library.NoInitException;
+import eu.discoveri.predikt.astronomy.library.ObsInfo;
+import eu.discoveri.predikt.astronomy.library.PlanetData;
+import eu.discoveri.predikt.astronomy.library.Planets;
+import eu.discoveri.predikt.exception.RealTimeConversionException;
+
 import eu.discoveri.predikt.exception.WheelGeometryException;
 import eu.discoveri.predikt.test.horochart.ZodiacHouse;
 import eu.discoveri.predikt.utils.Constants;
+import eu.discoveri.predikt.utils.TimeScale;
 import eu.discoveri.predikt.utils.Util;
 import eu.discoveri.prediktdemobe.Planet;
 
@@ -24,6 +33,7 @@ import java.awt.image.ImageObserver;
 
 import java.io.File;
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 import javafx.geometry.Point2D;
@@ -31,11 +41,11 @@ import javax.imageio.ImageIO;
 
 import org.jfree.graphics2d.svg.SVGGraphics2D;
 import org.jfree.graphics2d.svg.SVGUtils;
-//import org.jfree.graphics2d.svg.ViewBox;
 
 
 /**
- *
+ * @TODO: Ditch ImageObserver??
+ * 
  * @author Chris Powell, Discoveri OU
  * @email info@astrology.ninja
  */
@@ -51,7 +61,7 @@ public class Ring implements ImageObserver
                             logor;                                  // Logo circle radius
     private final Point2D   origin,                                 // [topleftx, toplefty]
                             ringO;                                  // Ring centre
-    private double          wheelRot;                               // Rotation of zodiac wheel to put ASC at 9pm
+    private double          angleAsc;                               // Rotation of zodiac wheel to put ASC at 9pm
 
     // Images
     private final Map<ZodiacHouse,ZImage> hImgMap   = new HashMap<>();
@@ -130,7 +140,7 @@ public class Ring implements ImageObserver
             BufferedImage sign = ImageIO.read(new File(Constants.RESOURCEPATH+"zodiac/"+house.getName().toLowerCase()+".png"));
 
             // Store the image with some metadata
-            Image image = sign.getScaledInstance((int)Constants.SCALEDZ,(int)Constants.SCALEDZ,Image.SCALE_SMOOTH);
+            Image image = sign.getScaledInstance(Constants.SCALEDZ,Constants.SCALEDZ,Image.SCALE_SMOOTH);
             ZImage zimage = new ZImage( image, Constants.SCALEDZ, Constants.SCALEDZ, Color.BLACK );
 
             hImgMap.put(house, zimage);
@@ -144,7 +154,7 @@ public class Ring implements ImageObserver
             BufferedImage cusp = ImageIO.read(new File(Constants.RESOURCEPATH+"zodiac/c"+ii+".png"));
 
             // Store the image with some metadata
-            Image image = cusp.getScaledInstance((int)Constants.SCALEDC,(int)Constants.SCALEDC,Image.SCALE_SMOOTH);
+            Image image = cusp.getScaledInstance(Constants.SCALEDC,Constants.SCALEDC,Image.SCALE_SMOOTH);
             ZImage zimage = new ZImage( image, Constants.SCALEDC, Constants.SCALEDC, Color.yellow );
             
             cNumMap.put(ii, zimage);
@@ -199,7 +209,7 @@ public class Ring implements ImageObserver
         
         // Draw logo  @TODO: Do this better!
         BufferedImage blogo = ImageIO.read(new File(Constants.RESOURCEPATH+"images/deltat.png"));
-        Image logo = blogo.getScaledInstance((int)Constants.SCALEDL,(int)Constants.SCALEDL,Image.SCALE_SMOOTH);
+        Image logo = blogo.getScaledInstance(Constants.SCALEDL,Constants.SCALEDL,Image.SCALE_SMOOTH);
         g2.drawImage( logo, (int)(11.d+topleftX+rO-logor/2.d), (int)(11.d+topleftY+rO-logor/2.d), null );
     }
 
@@ -208,79 +218,72 @@ public class Ring implements ImageObserver
      * 
      * @param g2
      * @throws IOException
+     * @throws RealTimeConversionException
+     * @throws NoInitException
      */
     public void drawPlanets( SVGGraphics2D g2 )
-            throws IOException
+            throws IOException, RealTimeConversionException, NoInitException
     {
         // Get the planets
-        Map<String,Planet> planets = Planet.getPlanets();
+        Map<Integer,Planet> planets = Planet.getPlanetsByOrder();
         
-        planets.entrySet().stream().map((entry) -> {
-            // Get planet posn.
-            ephemerisCalc(entry.getValue());
-            return entry;
-        }).forEachOrdered((entry) -> {
-            System.out.println("....> " +entry.getValue().getName() );
-        });
+        //******** TEST ********
+        ObsInfo oi = new ObsInfo(new Latitude(-24.75), new Longitude(-25.9167));
+        LocalDateTime ldt = LocalDateTime.of(1966,9,30, 0,0,0);
+        double jd = TimeScale.julianDayTimeClassic(ldt);
+        //**********************
         
-        // See if any overlap
+        for( Map.Entry<Integer,Planet> entry: planets.entrySet() )
+        {
+            // Get planet posn. (Ecliptic longitude)
+            PlanetData pde = new PlanetData(entry.getKey(), jd, oi);
+            entry.getValue().setRadians(pde.getEclipticLon());
+        }
+        
+        // See if any overlap, move one planet out if so.
         planets.entrySet().forEach((entry) -> {
-            planets.entrySet().stream().filter((entry2) -> !( entry2.getValue().getOrder() == entry.getValue().getOrder() )).map((entry2) -> {
-                System.out.println(entry2.getValue().getName()+": "+entry2.getValue().getDegrees()+", "+entry.getValue().getName()+": "+entry.getValue().getDegrees());
+            planets.entrySet().stream().filter((entry2) -> !( (entry2.getValue().getOrder() == entry.getValue().getOrder())) && entry.getValue().getDisplay() && entry2.getValue().getDisplay() ).map((entry2) -> {
+                //System.out.println(entry2.getValue().getName()+": "+entry2.getValue().getDegrees()+", "+entry.getValue().getName()+": "+entry.getValue().getDegrees());
                 // Planets on top of each other?
                 return entry2;
             }).filter((entry2) -> ( Math.abs(entry2.getValue().getDegrees() - entry.getValue().getDegrees()) < Constants.POVERLAP &&
-                    entry2.getValue().getOffset() == entry.getValue().getOffset()                                    )).map((_item) -> {
+                    entry2.getValue().getOffset() == entry.getValue().getOffset()  )).map((_item) -> {
                         entry.getValue().setOffset(entry.getValue().getOffset()+Constants.POFFSET);
                 return _item;
             }).forEachOrdered((_item) -> {
-                System.out.println("....> "+entry.getValue().getOffset());
+                System.out.println("....> "+entry.getValue().getName()+": "+entry.getValue().getOffset());
             });
         });
         
-        for( Map.Entry<String,Planet> entry: planets.entrySet() )
+        for( Map.Entry<Integer,Planet> entry: planets.entrySet() )
         {
             // Draw planet
-            drawPlanet( g2, new File(entry.getValue().getFilename()), entry.getValue().getDegrees(), entry.getValue().getOffset() );
+            drawPlanet( g2, entry.getValue() );
         }
     }
 
-    /*
-     * Get planet position
-     */
-    public void ephemerisCalc( Planet planet )
-    {
-        if( planet.getName() == "Sun" )
-        {
-            planet.setDegrees(15.d); return;
-        }
-        else
-        if( planet.getName() == "Pluto")
-        {
-            planet.setDegrees(15.d); return;
-        }
-        else
-        if( planet.getName() == "Neptune")
-        {
-            planet.setDegrees(240.d);  return;
-        }
-
-        planet.setDegrees(66.d); return;
-    }
     
     /*
      * Draw planet
      */
-    private void drawPlanet( SVGGraphics2D g2, File planet, double degrees, double offsetPct )
+    private void drawPlanet( SVGGraphics2D g2, Planet p )
             throws IOException
     {
-        // Calculate the planet radial position given an offset
-        Point2D posn = calcPosn( degrees, offsetPct );
+        // Not to be displayed
+        if( !p.getDisplay() ) return;
+        
+        // PI/2 as zodiac planets measured from 12am not 3pm plus
+        //    net ASC rotation (PI/6 - asc angle)
+        // PI/2 + Pi/6 = 2PI/3
+        double rotate = (2*Math.PI/3.d) - angleAsc;
+
+        // Calculate the planet radial position given a radial offset (rO+x)
+        double xy[] = calcXY( rO+p.getOffset(), p.getRadians()+rotate, Constants.SCALEDP/2.d, Constants.SCALEDP/2.d );
         
         // Planet
-        BufferedImage bplanet = ImageIO.read(planet);
-        Image sun = bplanet.getScaledInstance(40,40,Image.SCALE_SMOOTH);
-        g2.drawImage( sun, (int)posn.getX(), (int)posn.getY(), this );
+        BufferedImage bplanet = ImageIO.read(new File(p.getFilename()));
+        Image body = bplanet.getScaledInstance(Constants.SCALEDP,Constants.SCALEDP,Image.SCALE_SMOOTH);
+        g2.drawImage( body, (int)xy[0], (int)xy[1], null );
     }
 
     /**
@@ -316,9 +319,10 @@ public class Ring implements ImageObserver
         // Offsets with zodiac borders, angle in radians
         double RDELTA = 0.85d, TDELTA = 0.26;
         
+        // ***** TEST ******
         // ASC house and angle in house
         Cpa asc = getCpaMap().get(0);
-        double angleAsc = asc.getAngle();
+        angleAsc = asc.getAngle();
         int houseAsc = asc.getNum();
 
         
@@ -536,7 +540,7 @@ public class Ring implements ImageObserver
      * @throws Exception 
      */
     private void drawWheel( SVGGraphics2D g2 )
-            throws IOException
+            throws IOException, RealTimeConversionException, NoInitException
     {
         // Setup the empty ring
         drawHoroRing(g2, new Color(247,247,217), new Color(225,244,249));
@@ -548,7 +552,7 @@ public class Ring implements ImageObserver
         drawCuspBounds(g2);
 
 //        // Planets
-//        drawPlanets(g2);
+        drawPlanets(g2);
 //        // Draw aspects
 //        drawAspects(g2);
 
@@ -859,7 +863,7 @@ public class Ring implements ImageObserver
      * =======
      */
     public static void main(String[] args)
-            throws IOException, WheelGeometryException
+            throws IOException, WheelGeometryException, RealTimeConversionException, NoInitException
     {
         // Initialise ring
         int VIEWW = 800, VIEWH = 800;
@@ -903,7 +907,7 @@ public class Ring implements ImageObserver
 class ZImage
 {
     private final Image   image;
-    private final double  height, width;
+    private final int     height, width;
     private final Color   colour;
 
     /**
@@ -914,7 +918,7 @@ class ZImage
      * @param width
      * @param colour 
      */
-    public ZImage(Image image, double height, double width, Color colour)
+    public ZImage(Image image, int height, int width, Color colour)
     {
         this.image = image;
         this.height = height;
@@ -923,8 +927,8 @@ class ZImage
     }
 
     public Image getImage() { return image; }
-    public double getHeight() { return height; }
-    public double getWidth() { return width; }
+    public int getHeight() { return height; }
+    public int getWidth() { return width; }
     public Color getColour() { return colour; }
 }
 
@@ -936,7 +940,7 @@ class Cpa
     private final String    name;
 
     // Borth, Wales
-    private static Map<Integer,Cpa> cpaMap0 = new HashMap<Integer,Cpa>()
+    private final static Map<Integer,Cpa> cpaMap0 = new HashMap<Integer,Cpa>()
         {{
             put(0,new Cpa(0.380,3,"Can"));
             put(1,new Cpa(0.1248,4,"Leo"));
@@ -953,7 +957,7 @@ class Cpa
         }};
     
     // Dublin, Ireland
-    private static Map<Integer,Cpa> cpaMap1 = new HashMap<Integer,Cpa>()
+    private final static Map<Integer,Cpa> cpaMap1 = new HashMap<Integer,Cpa>()
         {{
             put(0,new Cpa(0.380,3,"Can"));
             put(1,new Cpa(0.1248,4,"Leo"));
@@ -970,7 +974,7 @@ class Cpa
         }};
     
     // Recife, Brazil
-    private static Map<Integer,Cpa> cpaMap2 = new HashMap<Integer,Cpa>()
+    private final static Map<Integer,Cpa> cpaMap2 = new HashMap<Integer,Cpa>()
         {{
             put(0,new Cpa(0.380,3,"Can"));
             put(1,new Cpa(0.1248,4,"Leo"));

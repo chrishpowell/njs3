@@ -156,7 +156,8 @@ public class TimeScale
     }
     
     /**
-     * Julian Day
+     * Julian Day (date).  Note midnight to midnight (not class noon)
+     * 
      * @param year
      * @param month
      * @param dayOfMonth
@@ -168,6 +169,59 @@ public class TimeScale
     {
         LocalDate date = LocalDate.of(year, month, dayOfMonth);
         return date.getLong(JulianFields.JULIAN_DAY);
+    }
+    
+    /**
+     * Julian Day (datetime) as nnnnn.mmm.  Note midnight to midnight (not classic noon).
+     * 
+     * @param year
+     * @param month
+     * @param dayOfMonth
+     * @param hour
+     * @param min
+     * @param sec
+     * @return
+     * @throws DateTimeException 
+     * @throws RealTimeConversionException
+     */
+    public static double julianDayTime( int year, int month, int dayOfMonth, int hour, int min, int sec )
+            throws DateTimeException, RealTimeConversionException
+    {
+        return LocalDate.of(year, month, dayOfMonth).getLong(JulianFields.JULIAN_DAY) + realTime(hour,min,sec,0)/24.d;
+    }
+    
+    /**
+     * Julian Day Classic (datetime) as nnnnn.mmm.  Note noon to noon (classic).
+     * 
+     * @param year
+     * @param month
+     * @param dayOfMonth
+     * @param hour
+     * @param min
+     * @param sec
+     * @return
+     * @throws DateTimeException 
+     * @throws RealTimeConversionException
+     */
+    public static double julianDayTimeClassic( int year, int month, int dayOfMonth, int hour, int min, int sec )
+            throws DateTimeException, RealTimeConversionException
+    {
+        return LocalDate.of(year, month, dayOfMonth).getLong(JulianFields.JULIAN_DAY) + realTime(hour,min,sec,0)/24.d - Constants.JDOFFSETCLASSIC;
+    }
+    
+    /**
+     * Julian Day Classic (datetime) as nnnnn.mmm.  Note noon to noon (classic).
+     * 
+     * @param ldt
+     * @return
+     * @throws DateTimeException
+     * @throws RealTimeConversionException 
+     */
+    public static double julianDayTimeClassic( LocalDateTime ldt )
+            throws DateTimeException, RealTimeConversionException
+    {
+        LocalTime lt = ldt.toLocalTime();
+        return ldt.getLong(JulianFields.JULIAN_DAY) + realTime(lt.getHour(),lt.getMinute(),lt.getSecond(),0)/24.d - Constants.JDOFFSETCLASSIC;
     }
     
     /**
