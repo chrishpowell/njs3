@@ -22,23 +22,6 @@ import java.util.Map;
  */
 public class HoroHouseTest
 {
-    // 'Empty' map for cusps
-    private static Map<Integer,CuspPlusAngle> cpaMap = new HashMap<Integer,CuspPlusAngle>()
-        {{
-            put(1,new CuspPlusAngle().setAttribute(ZhAttribute.ASC));
-            put(2,new CuspPlusAngle().setAttribute(ZhAttribute.UNDEF));
-            put(3,new CuspPlusAngle().setAttribute(ZhAttribute.UNDEF));
-            put(4,new CuspPlusAngle().setAttribute(ZhAttribute.IC));
-            put(5,new CuspPlusAngle().setAttribute(ZhAttribute.UNDEF));
-            put(6,new CuspPlusAngle().setAttribute(ZhAttribute.UNDEF));
-            put(7,new CuspPlusAngle().setAttribute(ZhAttribute.DSC));
-            put(8,new CuspPlusAngle().setAttribute(ZhAttribute.UNDEF));
-            put(9,new CuspPlusAngle().setAttribute(ZhAttribute.UNDEF));
-            put(10,new CuspPlusAngle().setAttribute(ZhAttribute.MC));
-            put(11,new CuspPlusAngle().setAttribute(ZhAttribute.UNDEF));
-            put(12,new CuspPlusAngle().setAttribute(ZhAttribute.UNDEF));
-        }};
-            
     private static void mcAscTesting()
             throws Exception
     {
@@ -60,7 +43,7 @@ public class HoroHouseTest
             LocalDateTime ldt = v.getUtcDT();
 
             //... Setup (note LST in degrees).  Order is important...
-            HoroHouse hh = new HoroHouse( k, ldt, cpaMap );
+            HoroHouse hh = new HoroHouse( new User("A",k,ldt, ChartType.PLACIDUS) );
             
             // 1. Calc obliquity
             hh.calcObliquity(ldt);
@@ -143,14 +126,15 @@ public class HoroHouseTest
 // 12, 29 Tau 50'  0"        20° 7'13" N
         placeName = "Gaborone, Botswana";
         System.out.println("Place: " +placeName);
-        ldt = LocalDateTime.of(LocalDate.of(1966,9,30), LocalTime.MIDNIGHT);
+        ldt = LocalDateTime.of(LocalDate.of(1966,9,30), LocalTime.of(4, 30));//LocalTime.MIDNIGHT);
+        User user = new User("FredB",placeName,ldt,ChartType.PLACIDUS);
         System.out.println( "Date, time of birth: " +
                 Util.caps(ldt.getDayOfWeek().toString())+ ", " +
                 ldt.toLocalDate().toString()+ " " +
                 ldt.toLocalTime().toString()         );
         
         //... Setup & calc LST
-        hh = new HoroHouse(placeName, ldt, cpaMap).init();
+        hh = new HoroHouse(user).init();
         System.out.println("LST (expect 00:16:30): " + TimeScale.time2Hhmmss(hh.getLST()));
         System.out.println("LatLon: " +hh.getLatLon().fmtLatLonDMS());
         
@@ -531,69 +515,76 @@ class MCTestTable
     private HouseAngle          expmc = null,
                                 expasc = null;
 
-    private final static Map<String,MCTestTable>   mctMap;
+    private static Map<String,MCTestTable>   mctMap = null;
     static
     {
-        mctMap = new HashMap<>();
-        mctMap.put( "Rosscarbery-20000101-12:00",
-                    new MCTestTable( new LatLon(51.4934d,-9.167325d, false),
-                    LocalDateTime.of(LocalDate.of(2000,1,1),LocalTime.NOON),"Europe/London",
-                    18.096111d, 4.74d,
-                        new HouseAngle(ZodiacHouse.CAPRICORN,0.02303835d), new HouseAngle(ZodiacHouse.ARIES,0.060403d)  ));
-        
-        mctMap.put( "Gaborone-19660930-00:00",
-                    new MCTestTable( new LatLon(-24.6282d,25.9231d, false),
-                    LocalDateTime.of(LocalDate.of(1966,9,30),LocalTime.MIDNIGHT),"Africa/Gaborone",
-                    0.275d, 0.071995d,
-                        new HouseAngle(ZodiacHouse.ARIES,0.0784719d), new HouseAngle(ZodiacHouse.GEMINI,0.406419d)  ));
-        
-        mctMap.put( "Recife-20000101-12:30",
-                    new MCTestTable( new LatLon(-8.053889,-34.8811d, false),
-                    LocalDateTime.of(LocalDate.of(2000,1,1),LocalTime.of(12,30)),"America/Recife",
-                    18.87861d, 4.94d,
-                        new HouseAngle(ZodiacHouse.CAPRICORN,0.211616d), new HouseAngle(ZodiacHouse.ARIES,0.2356194d)  ));
-        
-        mctMap.put( "Recife-20000322-12:30",
-                    new MCTestTable( new LatLon(-8.0578,-34.8829d, false),
-                    LocalDateTime.of(LocalDate.of(2000,3,22),LocalTime.of(12,30)),"America/Recife",
-                    1.203889d, 0.315177d,
-                        new HouseAngle(ZodiacHouse.ARIES,0.34142d), new HouseAngle(ZodiacHouse.CANCER,0.235469d)  ));
-        
-        mctMap.put( "Recife-20000621-12:30",
-                    new MCTestTable( new LatLon(-8.0578,-34.8829d, false),
-                    LocalDateTime.of(LocalDate.of(2000,6,21),LocalTime.of(12,30)),"America/Recife",
-                    7.18334d, 1.8806d,
-                        new HouseAngle(ZodiacHouse.CANCER,0.28567d), new HouseAngle(ZodiacHouse.LIBRA,0.356949d)  ));
-        
-        mctMap.put( "Recife-20000923-12:30",
-                    new MCTestTable( new LatLon(-8.0578,-34.8829d, false),
-                    LocalDateTime.of(LocalDate.of(2000,9,23),LocalTime.of(12,30)),"America/Recife",
-                    13.36d, 3.4976398d,
-                        new HouseAngle(ZodiacHouse.LIBRA,0.3851263d), new HouseAngle(ZodiacHouse.CAPRICORN,0.38161d)  ));
-        
-        mctMap.put( "Recife-20001222-12:30",
-                    new MCTestTable( new LatLon(-8.0578,-34.8829d, false),
-                    LocalDateTime.of(LocalDate.of(2000,12,22),LocalTime.of(12,30)),"America/Recife",
-                    19.27389d, 5.04589d,
-                        new HouseAngle(ZodiacHouse.CAPRICORN,0.307779d), new HouseAngle(ZodiacHouse.ARIES,0.34077d)  ));
-        
-        mctMap.put( "ChadwellStMary-20001222-12:30",
-                    new MCTestTable( new LatLon(51.48334d,0.3667d, false),
-                    LocalDateTime.of(LocalDate.of(2000,1,1),LocalTime.of(12,30)),"Europe/London",
-                    19.223d, 5.03257d,
-                        new HouseAngle(ZodiacHouse.CAPRICORN,0.29531d), new HouseAngle(ZodiacHouse.TAURUS,0.17975d)  ));
-        
-        mctMap.put( "Santiago,Chile-20000322-00:30",
-                    new MCTestTable( new LatLon(-33.4489d,-70.6693d, false),
-                    LocalDateTime.of(LocalDate.of(2000,3,22),LocalTime.of(0,30)),"America/Santiago",
-                    11.788d, 3.08609d,
-                        new HouseAngle(ZodiacHouse.VIRGO,0.46311d), new HouseAngle(ZodiacHouse.CAPRICORN,0.2091d)  ));
-        
-        mctMap.put( "Greenwich-20000101-12:00",
-                    new MCTestTable( new LatLon(51.5d,0d, false),
-                    LocalDateTime.of(LocalDate.of(2000,1,1),LocalTime.of(12,0)),"Europe/London",
-                    18.6972d, 4.89492d,
-                        new HouseAngle(ZodiacHouse.CAPRICORN,0.16775d), new HouseAngle(ZodiacHouse.ARIES,0.42362d)  ));
+        try
+        {
+            mctMap = new HashMap<>();
+            mctMap.put( "Rosscarbery-20000101-12:00",
+                        new MCTestTable( new LatLon(51.4934d,-9.167325d, false),
+                        LocalDateTime.of(LocalDate.of(2000,1,1),LocalTime.NOON),"Europe/London",
+                        18.096111d, 4.74d,
+                            new HouseAngle(ZodiacHouse.CAPRICORN,0.02303835d), new HouseAngle(ZodiacHouse.ARIES,0.060403d)  ));
+
+            mctMap.put( "Gaborone-19660930-00:00",
+                        new MCTestTable( new LatLon(-24.6282d,25.9231d, false),
+                        LocalDateTime.of(LocalDate.of(1966,9,30),LocalTime.MIDNIGHT),"Africa/Gaborone",
+                        0.275d, 0.071995d,
+                            new HouseAngle(ZodiacHouse.ARIES,0.0784719d), new HouseAngle(ZodiacHouse.GEMINI,0.406419d)  ));
+
+            mctMap.put( "Recife-20000101-12:30",
+                        new MCTestTable( new LatLon(-8.053889,-34.8811d, false),
+                        LocalDateTime.of(LocalDate.of(2000,1,1),LocalTime.of(12,30)),"America/Recife",
+                        18.87861d, 4.94d,
+                            new HouseAngle(ZodiacHouse.CAPRICORN,0.211616d), new HouseAngle(ZodiacHouse.ARIES,0.2356194d)  ));
+
+            mctMap.put( "Recife-20000322-12:30",
+                        new MCTestTable( new LatLon(-8.0578,-34.8829d, false),
+                        LocalDateTime.of(LocalDate.of(2000,3,22),LocalTime.of(12,30)),"America/Recife",
+                        1.203889d, 0.315177d,
+                            new HouseAngle(ZodiacHouse.ARIES,0.34142d), new HouseAngle(ZodiacHouse.CANCER,0.235469d)  ));
+
+            mctMap.put( "Recife-20000621-12:30",
+                        new MCTestTable( new LatLon(-8.0578,-34.8829d, false),
+                        LocalDateTime.of(LocalDate.of(2000,6,21),LocalTime.of(12,30)),"America/Recife",
+                        7.18334d, 1.8806d,
+                            new HouseAngle(ZodiacHouse.CANCER,0.28567d), new HouseAngle(ZodiacHouse.LIBRA,0.356949d)  ));
+
+            mctMap.put( "Recife-20000923-12:30",
+                        new MCTestTable( new LatLon(-8.0578,-34.8829d, false),
+                        LocalDateTime.of(LocalDate.of(2000,9,23),LocalTime.of(12,30)),"America/Recife",
+                        13.36d, 3.4976398d,
+                            new HouseAngle(ZodiacHouse.LIBRA,0.3851263d), new HouseAngle(ZodiacHouse.CAPRICORN,0.38161d)  ));
+
+            mctMap.put( "Recife-20001222-12:30",
+                        new MCTestTable( new LatLon(-8.0578,-34.8829d, false),
+                        LocalDateTime.of(LocalDate.of(2000,12,22),LocalTime.of(12,30)),"America/Recife",
+                        19.27389d, 5.04589d,
+                            new HouseAngle(ZodiacHouse.CAPRICORN,0.307779d), new HouseAngle(ZodiacHouse.ARIES,0.34077d)  ));
+
+            mctMap.put( "ChadwellStMary-20001222-12:30",
+                        new MCTestTable( new LatLon(51.48334d,0.3667d, false),
+                        LocalDateTime.of(LocalDate.of(2000,1,1),LocalTime.of(12,30)),"Europe/London",
+                        19.223d, 5.03257d,
+                            new HouseAngle(ZodiacHouse.CAPRICORN,0.29531d), new HouseAngle(ZodiacHouse.TAURUS,0.17975d)  ));
+
+            mctMap.put( "Santiago,Chile-20000322-00:30",
+                        new MCTestTable( new LatLon(-33.4489d,-70.6693d, false),
+                        LocalDateTime.of(LocalDate.of(2000,3,22),LocalTime.of(0,30)),"America/Santiago",
+                        11.788d, 3.08609d,
+                            new HouseAngle(ZodiacHouse.VIRGO,0.46311d), new HouseAngle(ZodiacHouse.CAPRICORN,0.2091d)  ));
+
+            mctMap.put( "Greenwich-20000101-12:00",
+                        new MCTestTable( new LatLon(51.5d,0d, false),
+                        LocalDateTime.of(LocalDate.of(2000,1,1),LocalTime.of(12,0)),"Europe/London",
+                        18.6972d, 4.89492d,
+                            new HouseAngle(ZodiacHouse.CAPRICORN,0.16775d), new HouseAngle(ZodiacHouse.ARIES,0.42362d)  ));
+        }
+        catch( Exception e )
+        {
+            e.printStackTrace();
+        }
     }
     
     /**

@@ -8,12 +8,24 @@ import eu.discoveri.predikt.astronomy.library.Longitude;
 import eu.discoveri.predikt.astronomy.library.NoInitException;
 import eu.discoveri.predikt.astronomy.library.ObsInfo;
 import eu.discoveri.predikt.astronomy.library.PlanetData;
-import eu.discoveri.predikt.astronomy.library.Planets;
-import eu.discoveri.predikt.exception.RealTimeConversionException;
 
+import eu.discoveri.predikt.exception.GeonamesNoResultsException;
+import eu.discoveri.predikt.exception.InvalidLocationException;
+import eu.discoveri.predikt.exception.RealTimeConversionException;
 import eu.discoveri.predikt.exception.WheelGeometryException;
+import eu.discoveri.predikt.test.horochart.Aspect;
+
+import eu.discoveri.predikt.test.horochart.ChartType;
+import eu.discoveri.predikt.test.horochart.CuspPlusAngle;
+import eu.discoveri.predikt.test.horochart.RotateDiff;
+import eu.discoveri.predikt.test.horochart.HoroHouse;
+import eu.discoveri.predikt.test.horochart.User;
+import eu.discoveri.predikt.test.horochart.ZhAttribute;
 import eu.discoveri.predikt.test.horochart.ZodiacHouse;
+
+import eu.discoveri.predikt.utils.ZImage;
 import eu.discoveri.predikt.utils.Constants;
+import eu.discoveri.predikt.utils.ImagesUtil;
 import eu.discoveri.predikt.utils.TimeScale;
 import eu.discoveri.predikt.utils.Util;
 import eu.discoveri.prediktdemobe.Planet;
@@ -21,6 +33,7 @@ import eu.discoveri.prediktdemobe.Planet;
 import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Font;
+import java.awt.GradientPaint;
 import java.awt.Graphics2D;
 import java.awt.Image;
 import java.awt.RenderingHints;
@@ -31,14 +44,29 @@ import java.awt.geom.Path2D;
 import java.awt.image.BufferedImage;
 import java.awt.image.ImageObserver;
 
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
+
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
+import java.util.stream.Collectors;
+
+import java.text.DecimalFormat;
 import javafx.geometry.Point2D;
 import javax.imageio.ImageIO;
 
+/*** Move to Batik? ***/
 import org.jfree.graphics2d.svg.SVGGraphics2D;
 import org.jfree.graphics2d.svg.SVGUtils;
 
@@ -55,23 +83,104 @@ public class Ring implements ImageObserver
     private final int       vwidth,
                             vheight;                                // Graphics size (can be re-sized)
     // Ring
-    private final double    thick;                                  // Thickness of ring
+    private final double    thick,                                  // Thickness of ring
+                            arOrigin;                               // Aspect ring 'origin'
     private final double    rO,                                     // Outer ring radius
                             rI,                                     // Inner ring radius
+                            rA,                                     // Aspect ring radius
+                            rhvn,                                   // Heavens radius
                             logor;                                  // Logo circle radius
     private final Point2D   origin,                                 // [topleftx, toplefty]
                             ringO;                                  // Ring centre
-    private double          angleAsc;                               // Rotation of zodiac wheel to put ASC at 9pm
+    
+    // Ascendant
+    private CuspPlusAngle   asc;
+    private double          angleAsc;                               // Rotation of zodiac wheel to put ASC at 9pm  @TODO: Remove??
 
-    // Images
-    private final Map<ZodiacHouse,ZImage> hImgMap   = new HashMap<>();
-    private final Map<Integer,ZImage> cNumMap   = new HashMap<>();
+    // Images  @TODO: Make all SVG
+    private final Map<ZodiacHouse,ZImage>   zhImgMap = new HashMap<>();         // @TODO: Put in ZodiacHouse
+    private final Map<Integer,ZImage>       cnImgMap = new HashMap<>();         // @TODO: Put in CircledNumbers (@TODO: Create)
+    private final Map<Aspect,ZImage>        asImgMap = new HashMap<>();         // @TODO: Put in Aspect
+    private Map<Planet,ZImage>              plDarkImgMap;
+    private Map<Planet,ZImage>              plLiteImgMap;
     
+    
+    // Planets (initialises all planets)
+    private final Map<Integer,Planet>       planets = Planet.getPlanetsByOrder();
+    private final Map<String,Planet>        planetNames = Planet.getPlanetsByName();
+    
+    // Aspects by Planet
+    Map<Planet,List<PlanetsAspect>>         planetAspectMap = new TreeMap<>();
+    
+    // Wheel is night at top (user view at birth)
+    private boolean                         darkAtTop = true;
+
+
     // --------- TEST: Wheel data ----------------------------------------------
-    private static Map<Integer,Cpa> cpaMap3 = Cpa.getCpa(); // **** Test Cpa
-    public Map<Integer,Cpa> getCpaMap() { return cpaMap3; }
-    //--------------------------------------------------------------------------
+    LocalDateTime       ldt = LocalDateTime.MIN;
+    private double      jd;
+    private ObsInfo     oi;
     
+    // House/Cusp system
+    private HoroHouse   hh;
+    
+    // Output HTML
+    private String      htmlHead = "<!DOCTYPE html>\n" +
+"<!-- User zodiac -->\n" +
+"<html>\n" +
+"    <head>\n" +
+"        <title>User data</title>\n" +
+"        <meta charset=\"UTF-8\">\n" +
+"        <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n" +
+"        <style> * { font-family: Arial, Helvetica; } </style>" +
+"    </head>\n" +
+"    <body>\n" +
+"        <div style=\"width:98%; padding:10px; margin:20px 10px 30px 10px; font-size: 24px; background-color:#aed6f1; border-bottom: 3px solid black\">\n" +
+"            &delta;iscoveri.world\n" +
+"        </div>";
+    
+    private String wheel = "<div style=\"display: inline-block; margin: 0; padding: 0; vertical-align: top; border: 1px solid indigo;\">" +
+            "<div style=\"text-align: center; vertical-align: top; background: indigo; color:white; font-size: 25px\">" +
+            "<h2>Natal Chart Wheel</h2></div>" +
+"            <object class=\"wheel\" type=\"image/svg+xml\" data=\"/home/chrispowell/NetBeansProjects/PrediktDemoBE/src/main/java/resources/tests/ring-test.svg\">\n" +
+"                Your browser does not support SVG\n" +
+"            </object>\n" +
+"            </div>";
+    
+    private String closetablediv = "</tbody></table></div>";
+    private String htmlClose = "</div></body></html>";
+    
+    private StringBuilder usercusps = new StringBuilder("<div style=\"display: inline-block; vertical-align: top; margin-left: 10px;\">\n" +
+"                <table style=\"width: 400px; border: 1px solid darkgray\">\n" +
+"                    <th style=\"background-color: lightgray; padding: 0; margin: 0\">Houses</th>\n" +
+"                    <th style=\"background-color: lightgray; padding: 0; margin: 0\">Wheel</th>\n" +
+"                    <th style=\"background-color: lightgray; padding: 0; margin: 0\">Declination</th><tbody>");
+    
+    // style=\"display: inline-block; vertical-align: top; margin-right:10px;\"
+    private StringBuilder userdata = new StringBuilder(
+                    "<div><table style=\"width: 350px; border: 1px solid darkgray\">\n" +
+                    "<th style=\"background-color: lightgoldenrodyellow; padding: 0; margin: 0\">User</th><tbody>");
+    
+    private StringBuilder aspectList = new StringBuilder(
+                    "<table style=\"border: 1px solid darkgray\">"+
+                    "<th colspan=\"2\" style=\"background-color: tomato; padding: 0; margin: 0\">Aspects</th>" +
+                    "<th style=\"background-color:tomato; padding: 0 3px 0 3px; margin: 0\">Degrees</th>");
+    
+    private StringBuilder userplanets = new StringBuilder("<div style=\"margin-top:20px\">" +
+"                <table style=\"width: 550px; border: 1px solid darkgray\">\n" +
+"                    <th style=\"background-color: lightsteelblue; padding: 0; margin: 0\">Symb</th>\n" +
+"                    <th style=\"background-color: lightsteelblue; padding: 0; margin: 0\">Planet</th>\n" +
+"                    <th style=\"background-color: lightsteelblue; padding: 0; margin: 0\">House</th>\n" +
+"                    <th style=\"background-color: lightsteelblue; padding: 0; margin: 0\">Longitude</th>\n" +
+"                    <th style=\"background-color: lightsteelblue; padding: 0; margin: 0\">Latitude</th>\n" +
+"                    <th style=\"background-color: lightsteelblue; padding: 0; margin: 0\">Declination</th><tbody>");
+    
+    // @TODO: Calculate colspan, don't do this in production
+    private StringBuilder useraspects = new StringBuilder("<div style=\"margin-top:20px; margin-left:10px\">" +
+"                <table style=\"border: 1px solid darkgray\">\n"+
+                    "<th style=\"background-color: tomato; padding: 0; margin: 0\">Planet</th>" +
+                    "<th colspan=\"7\" style=\"background-color: tomato; padding: 0; margin: 0;\">Aspects</th><tbody>");
+    //--------------------------------------------------------------------------
     
     /**
      * Setup view.  Note circles are ellipses with equal major/minor axis.
@@ -106,6 +215,10 @@ public class Ring implements ImageObserver
         this.thick = thickness;
         // Outer ring radius
         this.rO = radius;
+        // Aspect ring 'origin'
+        this.arOrigin = thick + Constants.ASPOUTER;
+        // Heavens radius
+        this.rhvn = radius + Constants.SKYRAD;
 
         // Where the view origin in relation to ring origin
         this.vheight = viewboxHeight;
@@ -117,50 +230,116 @@ public class Ring implements ImageObserver
         
         // Set inner ring radius
         this.rI = rO - thick;
+        // Set Aspect Ring radius
+        this.rA = rI - Constants.ASPOUTER;
         
         // Logo inner circle
         this.logor = logor;
     }
     
     /**
-     * Load up images etc.
+     * Load images etc.
+     * @throws IOException 
      */
-    private void init()
+    private void systemInit()
             throws IOException
     {
-        System.out.println("*** Init...");
+        String zodiacImagePath = Constants.RESOURCEPATH+"zodiac/";
+        String aspectImagePath = Constants.RESOURCEPATH+"aspects/";
+        
+        System.out.println("discoveri/predikt (part) initialisation...");
+        //----------------------------------------------------------------------
+        // Should be in an external system init
         System.out.println("Loading zodiac images...");
         Map<ZodiacHouse,Integer> zh = ZodiacHouse.getZHNameMap();
 
-        // Load zodiac images
+        // Load zodiac images (@TODO: Move to Zodiac House)
         for( ZodiacHouse house: zh.keySet() )
         {
             // Read image from file
             System.out.print(".");
-            BufferedImage sign = ImageIO.read(new File(Constants.RESOURCEPATH+"zodiac/"+house.getName().toLowerCase()+".png"));
+            BufferedImage sign = ImageIO.read(new File(zodiacImagePath+house.getName().toLowerCase()+".png"));
 
             // Store the image with some metadata
-            Image image = sign.getScaledInstance(Constants.SCALEDZ,Constants.SCALEDZ,Image.SCALE_SMOOTH);
-            ZImage zimage = new ZImage( image, Constants.SCALEDZ, Constants.SCALEDZ, Color.BLACK );
+//            Image image = sign.getScaledInstance(Constants.SCALEDZ,Constants.SCALEDZ,Image.SCALE_SMOOTH);
+            ZImage zimage = new ZImage( sign, Constants.SCALEDZ, Constants.SCALEDZ, Color.BLACK );
+            System.out.println("..>" +house.getName());
+            zimage.scalePreserveRatio(5,zimage);
+            System.out.println("--ZH--> Wid/Hgt: "+zimage.getWidth()+"/"+zimage.getHeight());
 
-            hImgMap.put(house, zimage);
+            zhImgMap.put(house, zimage);
         }
         System.out.println("\r\nLoaded zodiac images...");
         
+        // Circled cusp numbers (@TODO: Move to new class)
         System.out.println("Loading circled numbers...");
         for( int ii = 1; ii <= 12; ii++ )
         {
             System.out.print(".");
-            BufferedImage cusp = ImageIO.read(new File(Constants.RESOURCEPATH+"zodiac/c"+ii+".png"));
+            BufferedImage cusp = ImageIO.read(new File(zodiacImagePath+"/c"+ii+".png"));
 
             // Store the image with some metadata
-            Image image = cusp.getScaledInstance(Constants.SCALEDC,Constants.SCALEDC,Image.SCALE_SMOOTH);
-            ZImage zimage = new ZImage( image, Constants.SCALEDC, Constants.SCALEDC, Color.yellow );
+//            Image image = cusp.getScaledInstance(Constants.SCALEDC,Constants.SCALEDC,Image.SCALE_SMOOTH);
+            ZImage zimage = new ZImage( cusp, Constants.SCALEDC, Constants.SCALEDC, Color.yellow );
+            zimage.scalePreserveRatio(5,zimage);
+            System.out.println("--CN--> ZHt/ZWd: " +zimage.getHeight()+"/"+zimage.getWidth()+ ", Img> Ht/Wid: " +zimage.getImage().getHeight()+"/"+zimage.getImage().getWidth());
             
-            cNumMap.put(ii, zimage);
+            cnImgMap.put(ii, zimage);
         }
         System.out.println("\r\nLoaded circled numbers...");
-        System.out.println("***Init complete...");
+        
+        // Aspect images (@TODO: move to Aspect)
+        System.out.println("\r\nLoading aspect images...");
+        Map<String,Aspect> asp = Aspect.aspectsFactory();
+        for( String aspectName: asp.keySet() )
+        {
+            System.out.print(".");
+            BufferedImage aspect = ImageIO.read(new File(aspectImagePath+aspectName+".png"));
+            
+            // Store image with some metadata
+//            Image image = aspect.getScaledInstance(Constants.SCALEDA,Constants.SCALEDA,Image.SCALE_SMOOTH);
+            ZImage zimage = new ZImage( aspect, Constants.SCALEDA, Constants.SCALEDA, Color.BLACK );
+            
+            asImgMap.put(asp.get(aspectName), zimage);
+        }
+        System.out.println("\r\nLoaded aspect images...");
+        
+        // Planet images
+        System.out.println("\r\nLoading planet images...");
+        plDarkImgMap = Planet.getDarkImages();
+        plLiteImgMap = Planet.getLightImages();
+        System.out.println("\r\nLoaded planet images...");
+        //----------------------------------------------------------------------
+    }
+    
+    /**
+     * Set up user
+     */
+    private HoroHouse init( User user )
+            throws IOException, GeonamesNoResultsException, RealTimeConversionException
+    {
+        System.out.println("*** User init...");
+        
+        System.out.println("Init House/Cusps subsystem...");
+        hh = new HoroHouse(user).init();                                        // Initialise with user etc.
+        hh.setWheel(user.getCt());                                              // Set wheel type (default PLACIDUS)
+        System.out.println("House/Cusp system initialised");
+        
+        System.out.println("Observation info set...");
+        // User Observation info
+        jd = TimeScale.julianDayTimeClassic(ldt);
+        System.out.println("ldt: " +ldt.toString()+ ", jd: " +jd);
+        oi = new ObsInfo(new Latitude(hh.getLatLon().getLatitude()), new Longitude(hh.getLatLon().getLongitude()));
+        System.out.println("Observation info done...");
+        
+        System.out.println("Updating user location from place (LatLon)...");
+        if( user.isFirsttime() )
+            user.setPlace(hh.getLatLon());
+        System.out.println("User location updated...");
+        
+        System.out.println("***User init complete...");
+        
+        return hh;
     }
 
     /**
@@ -170,8 +349,7 @@ public class Ring implements ImageObserver
      * @param scolorOut Stroke and background colour outer
      * @param scolorIn Background colour inner
      */
-    public void drawHoroRing( SVGGraphics2D g2, Color scolorOut, Color scolorIn )
-            
+    public void drawHoroRing( SVGGraphics2D g2, Color scolorOut, Color scolorIn )        
     {
         // Origin
         double topleftX = origin.getX(), topleftY = origin.getY();
@@ -188,7 +366,7 @@ public class Ring implements ImageObserver
         g2.draw(inCircle);
         g2.fill(inCircle);
     }
-
+    
     /**
      * Draw centre circle with logo
      * @param g2
@@ -219,39 +397,41 @@ public class Ring implements ImageObserver
      * @param g2
      * @throws IOException
      * @throws RealTimeConversionException
-     * @throws NoInitException
+     * @throws NoInitException  @TODO: GET RID OF THIS NONSENSE!
+     * @throws InvalidLocationException
      */
     public void drawPlanets( SVGGraphics2D g2 )
-            throws IOException, RealTimeConversionException, NoInitException
+            throws IOException, RealTimeConversionException, NoInitException, InvalidLocationException
     {
-        // Get the planets
-        Map<Integer,Planet> planets = Planet.getPlanetsByOrder();
-        
-        //******** TEST ********
-        ObsInfo oi = new ObsInfo(new Latitude(-24.75), new Longitude(-25.9167));
-        LocalDateTime ldt = LocalDateTime.of(1966,9,30, 0,0,0);
-        double jd = TimeScale.julianDayTimeClassic(ldt);
-        //**********************
-        
-        for( Map.Entry<Integer,Planet> entry: planets.entrySet() )
+        // @TODO: Load planet data  ***** This all has to change *****
+        for( Map.Entry<Integer,Planet> p: planets.entrySet() )
         {
             // Get planet posn. (Ecliptic longitude)
-            PlanetData pde = new PlanetData(entry.getKey(), jd, oi);
-            entry.getValue().setRadians(pde.getEclipticLon());
+            PlanetData pde = new PlanetData(p.getKey(), jd, oi);
+            Planet planet = p.getValue();
+            //-----------
+//            System.out.println(""+Planets.getPlanetmap().get(pde.planet()));
+//            System.out.println("  RA: " +Util.dec2hhmmssRA(Math.toDegrees(pde.getRightAscension())));
+//            System.out.println("  RA (degs): " +Math.toDegrees(pde.getRightAscension()));
+//            System.out.println("  Decl: " +Util.dec2ddmmss(Math.toDegrees(pde.getDeclination()),Constants.LAT));
+            //-----------
+            planet.setRA(pde.getRightAscension());
+            planet.setDeclination(pde.getDeclination());
+            planet.setEclipticCoords(pde.getEclipticLat(), pde.getEclipticLon());
         }
         
         // See if any overlap, move one planet out if so.
         planets.entrySet().forEach((entry) -> {
-            planets.entrySet().stream().filter((entry2) -> !( (entry2.getValue().getOrder() == entry.getValue().getOrder())) && entry.getValue().getDisplay() && entry2.getValue().getDisplay() ).map((entry2) -> {
-                //System.out.println(entry2.getValue().getName()+": "+entry2.getValue().getDegrees()+", "+entry.getValue().getName()+": "+entry.getValue().getDegrees());
+            planets.entrySet().stream().filter((entry2) -> !( (entry2.getValue().getOrder() == entry.getValue().getOrder()))
+                                                && entry.getValue().forDisplay() && entry2.getValue().forDisplay() ).map((entry2) -> {
                 // Planets on top of each other?
                 return entry2;
-            }).filter((entry2) -> ( Math.abs(entry2.getValue().getDegrees() - entry.getValue().getDegrees()) < Constants.POVERLAP &&
+            }).filter((entry2) -> ( Math.abs(entry2.getValue().getRADegrees() - entry.getValue().getRADegrees()) < Constants.POVERLAP &&
                     entry2.getValue().getOffset() == entry.getValue().getOffset()  )).map((_item) -> {
                         entry.getValue().setOffset(entry.getValue().getOffset()+Constants.POFFSET);
                 return _item;
             }).forEachOrdered((_item) -> {
-                System.out.println("....> "+entry.getValue().getName()+": "+entry.getValue().getOffset());
+                //System.out.println("....> "+entry.getValue().getName()+": "+entry.getValue().getOffset());
             });
         });
         
@@ -261,29 +441,48 @@ public class Ring implements ImageObserver
             drawPlanet( g2, entry.getValue() );
         }
     }
+  
 
-    
-    /*
-     * Draw planet
+    /**
+     * Draw a planet
+     * @param g2
+     * @param p
+     * @throws IOException 
      */
     private void drawPlanet( SVGGraphics2D g2, Planet p )
             throws IOException
     {
-        // Not to be displayed
-        if( !p.getDisplay() ) return;
+        // Not to be displayed (such as NAP)
+        if( !p.forDisplay() ) return;
         
         // PI/2 as zodiac planets measured from 12am not 3pm plus
         //    net ASC rotation (PI/6 - asc angle)
         // PI/2 + Pi/6 = 2PI/3
         double rotate = (2*Math.PI/3.d) - angleAsc;
+        double planetPosnRads = p.getRA()+rotate;
 
         // Calculate the planet radial position given a radial offset (rO+x)
-        double xy[] = calcXY( rO+p.getOffset(), p.getRadians()+rotate, Constants.SCALEDP/2.d, Constants.SCALEDP/2.d );
+        double xy[] = calcXY( rO+p.getOffset(), planetPosnRads, Constants.SCALEDP/2.d, Constants.SCALEDP/2.d );
+        System.out.println("  Planet posn: " +p.getName()+"> "+planetPosnRads);
         
         // Planet
-        BufferedImage bplanet = ImageIO.read(new File(p.getFilename()));
-        Image body = bplanet.getScaledInstance(Constants.SCALEDP,Constants.SCALEDP,Image.SCALE_SMOOTH);
-        g2.drawImage( body, (int)xy[0], (int)xy[1], null );
+        // @TODO: ************ For all planets
+        // @TODO: Load all planet images at start
+        ZImage body;
+        if( darkAtTop )
+            // Weird positioning!  [Wheel anti-clock: 0.0 to 2*Math.PI/3 AND then clock: 0 to -Math.PI/2]
+            if( planetPosnRads > 0.d && planetPosnRads < Math.PI )
+                body = plLiteImgMap.get(p);
+            else
+                body = plDarkImgMap.get(p);
+        else
+            if( planetPosnRads > 0.d && planetPosnRads < Math.PI )
+                body = plDarkImgMap.get(p);
+            else
+                body = plLiteImgMap.get(p);
+
+        // Draw the body
+        g2.drawImage( body.getImage(), (int)xy[0], (int)xy[1], null );
     }
 
     /**
@@ -321,9 +520,11 @@ public class Ring implements ImageObserver
         
         // ***** TEST ******
         // ASC house and angle in house
-        Cpa asc = getCpaMap().get(0);
+        asc = hh.getCPAMap().get(ZhAttribute.ASCN);
+        
+        // ASC house and angle in house
         angleAsc = asc.getAngle();
-        int houseAsc = asc.getNum();
+        int houseAsc = asc.getHouseNum();
 
         
         /*
@@ -349,7 +550,7 @@ public class Ring implements ImageObserver
             double theta = wheelRotate(house-houseAsc) - angleAsc;
             
             // Calculate the position given radial and degree offsets
-            ZImage zimage = hImgMap.get(zhMap.get(house));                      // Get image
+            ZImage zimage = zhImgMap.get(zhMap.get(house));                      // Get image
             double xy[] = calcXY( rO*RDELTA, theta-TDELTA, Constants.SCALEDZ/2.d, Constants.SCALEDZ/2.d );                    // Calc posn.
             
             // Draw the zodiac sign (rotated)        
@@ -414,14 +615,14 @@ public class Ring implements ImageObserver
         
         //... Cusp notation
         // Get ASC
-        Cpa asc = getCpaMap().get(0);
+        CuspPlusAngle asc = hh.getCPAMap().get(ZhAttribute.ASCN);
 
-        double xy[] = calcXY(rO+28,Math.PI-0.025);
+        double xy[] = calcXY(rO+28,Math.PI-0.025);                  // **** @TODO Tidy up!! [28, 0.025...]
         g2.drawString("ASC", (float)xy[0], (float)xy[1]);
         
         // Angle: Degrees
-        int[] dm = Util.dec2ddmm(Math.toDegrees(asc.getAngle()));
-        xy = calcXY(rO+32.d,Math.PI+0.05);
+        int[] dm = Util.dec2ddmmRaw(Math.toDegrees(asc.getAngle()));
+        xy = calcXY(rO+32.d,Math.PI+0.05);                          // **** @TODO: Tidy up !!!
         g2.drawString(Integer.toString(dm[0]), (float)xy[0], (float)xy[1]);
         // Angle: Minutes
         g2.setFont(font.deriveFont((float)(fsiz*0.8)));
@@ -429,13 +630,13 @@ public class Ring implements ImageObserver
         g2.setFont(font.deriveFont(fsiz));
         
         // Get DSC
-        Cpa dsc = getCpaMap().get(6);
+        CuspPlusAngle dsc = hh.getCPAMap().get(ZhAttribute.DSCN);
         
         xy = calcXY(rO+2,-0.05);
         g2.drawString("DSC", (float)xy[0], (float)xy[1]);
         
         // Angle: Degrees
-        dm = Util.dec2ddmm(Math.toDegrees(dsc.getAngle()));
+        dm = Util.dec2ddmmRaw(Math.toDegrees(dsc.getAngle()));
         xy = calcXY(rO,0.0375);
         g2.drawString(Integer.toString(dm[0]), (float)xy[0], (float)xy[1]);
         // Angle: Minutes  
@@ -450,16 +651,17 @@ public class Ring implements ImageObserver
 
         // MC to IC
         // --------
-        Cpa mc = getCpaMap().get(9);
+        CuspPlusAngle mc = hh.getCPAMap().get(ZhAttribute.MCN);
 
         // 'Negative' difference between houses
-        int negHouseRot =  Constants.NUMHOUSESCLASSIC - (mc.getNum()-asc.getNum());
+        int negHouseRot =  Constants.NUMHOUSESCLASSIC - (mc.getHouseNum()-asc.getHouseNum());
         
         // Rotation (clock) (Pi minus, not PI plus):
         //  PI - (house difference * 30degs) -
         //           (ASC angle in house) - (30degs - (MC angle in house))
         double theta = rotateOverWheel(negHouseRot); 
         theta -= asc.getAngle() + (Math.PI/6.d - mc.getAngle());
+//        System.out.println("MC (degs)..> " +Math.toDegrees(mc.getAngle()));
         
         // Plot
         double xymc[] = calcXY(rO+9,theta);
@@ -484,13 +686,13 @@ public class Ring implements ImageObserver
             for( int zb = 0; zb <= 1; zb++ )
             {
                 // Remaining cusps 2(1),3(2); 5(4),6(5); 8(7),9(8); 11(10),12(11)
-                int z = 3*za-2+zb;
+                int z = 3*za-2+zb +1;  //******* +1
 
                 // Cusp
-                Cpa cz = getCpaMap().get(z);
+                CuspPlusAngle cz = hh.getCPAMap().get(z);
 
                 // 'Negative' difference between houses
-                negHouseRot =  Constants.NUMHOUSESCLASSIC - (cz.getNum()-asc.getNum());
+                negHouseRot =  Constants.NUMHOUSESCLASSIC - (cz.getHouseNum()-asc.getHouseNum());
 
                 // Rotation (clock) (NB: Pi minus, not PI plus):
                 //  PI - (house difference * 30degs) -
@@ -506,7 +708,7 @@ public class Ring implements ImageObserver
                 g2.drawLine( (int)beg[0],(int)beg[1], (int)end[0],(int)end[1] );
                 
                 // Draw cusp nums
-                drawCuspNum( g2, z+1, theta );
+                drawCuspNum( g2, z, theta );
             }
         }
     }
@@ -521,27 +723,263 @@ public class Ring implements ImageObserver
     private void drawCuspNum( SVGGraphics2D g2, int cuspNum, double theta )
     {
         // Cusp num radius
-        double cuspR = rI-10.d;
+        double cuspR = rI-Constants.CNRADIUS;
         
-        ZImage zi = cNumMap.get(cuspNum);
-        double xy[] = calcXY( cuspR,theta, zi.getHeight()/2.d,zi.getWidth()/2.d);
+        ZImage zi = cnImgMap.get(cuspNum);
+        double xy[] = calcXY( cuspR,theta, zi.getImage().getHeight()/2.d,zi.getImage().getWidth()/2.d);
         g2.drawImage(zi.getImage(), (int)xy[0], (int)xy[1], null);
     }
     
+        
     /**
-     * Draw the aspects
+     * Draw background (light/dark depending on time of birth)
      * @param g2 
      */
-    private void drawAspects( SVGGraphics2D g2 ){}
-
+    private void drawHeavens( SVGGraphics2D g2 )
+    {
+        // Cartesian origin
+        // @TODO: Fix all origins...
+        double topleftX = getOriginX()-Constants.SKYRAD, topleftY = getOriginY()-Constants.SKYRAD;
+        
+        // Gradients and stroke 8,17,165
+        GradientPaint d2l = new GradientPaint((float)(topleftX+rhvn),(float)(topleftY),new Color(11,0,112), (float)(topleftX+rhvn),(float)(topleftY+rhvn*1.66d),new Color(220,241,248));
+        GradientPaint l2d = new GradientPaint((float)(topleftX+rhvn),(float)(topleftY),new Color(220,241,248), (float)(topleftX+rhvn),(float)(topleftY+rhvn*2.34d),new Color(11,0,112));
+        g2.setColor(Color.BLACK);
+        g2.setStroke(new BasicStroke(2.0f));
+        
+        // Draw
+        Ellipse2D ell = new Ellipse2D.Double(topleftX, topleftY, 2*rhvn, 2*rhvn);
+        g2.draw(ell);
+        
+        // Night
+        if( (ldt.getHour() > 18 && ldt.getHour() <= 24) || (ldt.getHour() >= 0 && ldt.getHour() < 6) )
+        {
+            darkAtTop = true;       // Let planets know night at top (user view at birth)
+            g2.setPaint(d2l);
+        }
+        else
+        {
+            darkAtTop = false;      // Let planets know day time at top (user view at birth)
+            g2.setPaint(l2d);
+        }
+        
+        // Display
+        g2.fill(ell);
+    }
+    
+    
     /**
+     * Aspect nodes touch this ring
+     * @param g2 
+     * @param arColor
+     */
+    public void drawAspectRing( SVGGraphics2D g2, Color arColor )
+    {
+        // Origin
+        double topleftX = origin.getX(), topleftY = origin.getY();
+        
+        // Docs, btw, are confusing!  The args are: [x: top-left, y: top-left] (framing rect); major-axis diameter, minor-axis diameter
+        Ellipse2D aspectCircle = new Ellipse2D.Double(topleftX+arOrigin, topleftY+arOrigin, 2*rA, 2*rA);
+        
+        g2.setPaint(arColor);
+        g2.draw(aspectCircle);
+
+        // **** TEST aspect @TODO Remove
+        
+    }
+    
+    /**
+     * Calculate the planets' aspects.
+     * @see planetAspectMap
+     */
+    private void calculateAspects()
+    {
+        // Aspect types
+        Map<String,Aspect> asp = Aspect.aspectsFactory();
+        // Planet aspects for this user
+        Map<P1P2Key,PlanetsAspect> psa = PlanetsAspect.getPsaMap();
+        
+        /*
+         * Check for (major) aspects
+         */
+        // Planets
+        planets.entrySet().forEach((p1) -> {
+            planets.entrySet().forEach((p2) -> {
+                // Don't compare same planet against itself; 
+                // AND ignore display==false either planet;
+                if( !p1.equals(p2) &&
+                    (p1.getValue().forDisplay() && p2.getValue().forDisplay()) )
+                {
+                    // Get planet names
+                    Planet planet1 = p1.getValue();
+                    Planet planet2 = p2.getValue();
+                    
+                    //... If a map entry, don't redo (eg: Sun:Moon/Moon:Sun);
+                    if( !PlanetsAspect.checkFlippedKey(planet1,planet2) )
+                    {
+                        asp.entrySet().forEach((aspect) -> {
+                            // Rotational difference between planets
+                            double dd = Math.abs(p1.getValue().getRADegrees() - p2.getValue().getRADegrees());
+                            // Num. degrees aspect range: 'orb'
+                            RotateDiff orb = aspect.getValue().getDegreesDiff();
+                            // Is the rot. difference inside the 'orb'
+                            if( dd >= (double)(orb.getDegreesDiffExact() - orb.getDegreesDiffRange()) &&
+                                dd <= (double)(orb.getDegreesDiffExact() + orb.getDegreesDiffRange())   )
+                            {
+                                psa.put(new P1P2Key(planet1,planet2),new PlanetsAspect(p1.getValue(),p2.getValue(),aspect.getValue(),orb.getDegreesDiffExact()-dd));
+                            }
+                        });
+                    }
+                }
+            });
+        });
+        
+        // Ascendant/Midheaven
+        double mcDegs = Math.toDegrees(hh.getCPAMap().get(ZhAttribute.MCN).getAngle()); // Midheaven degrees
+        
+        planets.entrySet().forEach((p) -> {
+            // Don't compare same planet against itself; 
+            // AND ignore display==false either planet;
+            if( p.getValue().forDisplay() )
+            {
+                // Get planet names
+                Planet p1 = p.getValue();
+
+                // Ascendant
+                asp.entrySet().forEach((aspect) -> {
+                    // Rotational difference between planets
+                    double dd = Math.abs(p.getValue().getRADegrees() - Constants.NINETYDEGREES);
+
+                    // Num. degrees aspect range: 'orb'
+                    RotateDiff orb = aspect.getValue().getDegreesDiff();
+                    
+                    // Is the rot. difference inside the 'orb'
+                    if( dd >= (double)(orb.getDegreesDiffExact() - orb.getDegreesDiffRange()) &&
+                        dd <= (double)(orb.getDegreesDiffExact() + orb.getDegreesDiffRange())   )
+                    {
+                        psa.put(new P1P2Key(p1,planetNames.get(Planet.AC)),new PlanetsAspect(p.getValue(),planetNames.get(Planet.AC),aspect.getValue(),orb.getDegreesDiffExact()-dd));
+                    }
+                });
+                
+                // Midheaven
+                asp.entrySet().forEach((aspect) -> {
+                    // Rotational difference between planets
+                    double dd = Math.abs(p.getValue().getRADegrees() - mcDegs);
+                    // Num. degrees aspect range: 'orb'
+                    RotateDiff orb = aspect.getValue().getDegreesDiff();
+                    // Is the rot. difference inside the 'orb'
+                    if( dd >= (double)(orb.getDegreesDiffExact() - orb.getDegreesDiffRange()) &&
+                        dd <= (double)(orb.getDegreesDiffExact() + orb.getDegreesDiffRange())   )
+                    {
+                        psa.put(new P1P2Key(p1,planetNames.get(Planet.MC)),new PlanetsAspect(p.getValue(),planetNames.get(Planet.MC),aspect.getValue(),orb.getDegreesDiffExact()-dd));
+                    }
+                });
+            }
+        });
+        
+        /*
+         * Dump map @TODO: Remove
+         */
+//        DecimalFormat dfs = new DecimalFormat("#.##");
+//        psa.values().stream()
+//            // Group and sort groups (TreeMap) by Order
+//            .collect(Collectors.groupingBy(PlanetsAspect::getP1, TreeMap::new, Collectors.toList()))
+//            // Dump data
+//            .forEach((k,v)-> {
+//                System.out.print(k.getName()+"("+k.getOrder()+"):");
+//                v.forEach(a->System.out.print(" {"+a.getAspect().getName()+", "+a.getP2().getName()+ " ("+dfs.format(a.getDegsDiff())+")}"));
+//                System.out.println("");
+//            });
+        planetAspectMap = psa.values().stream()
+            // Group and sort groups (TreeMap) by Planet Order
+            .collect(Collectors.groupingBy(PlanetsAspect::getP1, TreeMap::new, Collectors.toList()));
+    }
+
+    
+    /**
+     * Draw the aspects on Wheel.
+     * 
+     * @param g2 
+     */
+    private void drawAspects( SVGGraphics2D g2 )
+    {
+        // Calculate the aspect map
+        calculateAspects();
+        
+        // ***** @TODO: Make rotate global
+        // PI/2 as zodiac planets measured from 12am not 3pm plus
+        //    net ASC rotation (PI/6 - asc angle)
+        // PI/2 + Pi/6 = 2PI/3
+        double rotate = (2*Math.PI/3.d) - angleAsc;
+        // Used to route around both sides of chart wheel centre
+        boolean add[] = {true};
+            
+        g2.setColor(Color.DARK_GRAY);
+        planetAspectMap.forEach((k,v) -> {
+            double p1RPosn = k.getRA() + rotate;
+            // List of PlanetsAspect
+            v.forEach(a -> {
+                if( !a.getP2().getName().equals(Planet.AC) && !a.getP2().getName().equals(Planet.MC) )
+                {
+                   if( !a.getAspect().getName().equals(Constants.CONJUNCTION) )
+                {
+                    // New path
+                    Path2D p2d = new Path2D.Double();
+                    switch( a.getAspect().getName() )
+                    {
+                        default: g2.setColor(Color.RED);
+                        break;
+                        case "trine": g2.setColor(Constants.TRINEC);
+                        break;
+                        case "square": g2.setColor(Constants.SQUAREC);
+                        break;
+                        case "sextile": g2.setColor(Constants.SEXTILEC);
+                        break;
+                        case "opposition": g2.setColor(Constants.OPPOSITIONC);
+                        break;
+                        // Should not appear!
+                        case "conjunction": g2.setColor(Color.WHITE);
+                        break;
+                    }
+
+                    // Whither bound?
+                    double p2RPosn = a.getP2().getRA() + rotate;
+
+                    // Start point
+                    double xy1[] = calcXY(rA,p1RPosn);
+                    p2d.moveTo(xy1[0], xy1[1]);
+                    // Intermediate point
+                    double xyi[] = calcXY(rA*0.6d,(add[0]?(p1RPosn+p2RPosn)/2.d:(p1RPosn-p2RPosn)/2.d));
+//                    double xyi[] = calcXY(rA*0.6,(p1RPosn+p2RPosn)/2.d);
+                    add[0] = !add[0];
+                    
+                    // End point
+                    double xy2[] = calcXY(rA,p2RPosn);
+
+                    // Draw it
+                    p2d.curveTo(xyi[0],xyi[1], xyi[0],xyi[1], xy2[0],xy2[1]);
+                    //p2d.closePath(); -- Note this closes the path (into a loop), we don't want that
+                    g2.draw(p2d);
+                }}
+            });
+        });
+    }
+
+    
+    /**
+     * --------------------
      * Draw the whole wheel
+     * --------------------
+     * 
      * @param g2
      * @throws Exception 
      */
     private void drawWheel( SVGGraphics2D g2 )
-            throws IOException, RealTimeConversionException, NoInitException
+            throws IOException, RealTimeConversionException, NoInitException, InvalidLocationException
     {
+        // Draw heavens representation
+        drawHeavens(g2);
+        
         // Setup the empty ring
         drawHoroRing(g2, new Color(247,247,217), new Color(225,244,249));
         
@@ -554,7 +992,8 @@ public class Ring implements ImageObserver
 //        // Planets
         drawPlanets(g2);
 //        // Draw aspects
-//        drawAspects(g2);
+        drawAspectRing(g2, Color.LIGHT_GRAY);
+        drawAspects(g2);
 
         // Draw centre ring with logo
         drawCentreRing(g2, new Color(133, 193, 233));
@@ -565,8 +1004,8 @@ public class Ring implements ImageObserver
      * Shift amounts (usually height/2,width/2) enable plotting to centre instead
      * of top left.
      * 
-     * @param r
-     * @param theta
+     * @param r radius
+     * @param theta Starts at North (up)?
      * @param shiftX Shift X (positive to left, negative to right)
      * @param shiftY Shift Y (positive up, negative down)
      * @return 
@@ -586,8 +1025,8 @@ public class Ring implements ImageObserver
     /**
      * [x,y] from [r,theta].  Origin is found in Point2D ringO.
      * 
-     * @param r
-     * @param theta
+     * @param r radius
+     * @param theta Starts at North (Up)?
      * @return 
      */
     private double[] calcXY( double r, double theta )
@@ -622,7 +1061,8 @@ public class Ring implements ImageObserver
 //      T E S T S
 //------------------------------------------------------------------------------
     /**
-     * Coordinate checker
+     * Coordinate checker.
+     * Draws small circles at specific coords.
      * @param g2 
      */
     private void drawCoords( Graphics2D g2 )
@@ -828,7 +1268,7 @@ public class Ring implements ImageObserver
         double shift = Constants.SCALEDC/2.d;
         for( int z=1; z<=12; z++ )
         {
-            ZImage c = cNumMap.get(z);
+            ZImage c = cnImgMap.get(z);
             
             xy = calcXY(3.d*logor,z*angle, shift, shift);
             g2.drawImage(c.getImage(), (int)xy[0], (int)xy[1], null);
@@ -856,6 +1296,117 @@ public class Ring implements ImageObserver
         
         return bi.getScaledInstance(50,50,Image.SCALE_SMOOTH);
     }
+    
+    /*
+     * Pump out test HTML
+     */
+    private void outHTML()
+            throws IOException
+    {
+        String HTMLFILE = "/home/chrispowell/NetBeansProjects/PrediktDemoBE/src/main/java/eu/discoveri/predikt/html/userdata.html";
+        String houseNum;
+        
+        // User data
+        User u = hh.getUser();
+        userdata.append("<tr><td>").append(u.getName()).append("</td></tr>");
+        userdata.append("<tr><td>"+u.getBirthLDT().toLocalDate().toString()+" "+u.getBirthLDT().toLocalTime().toString()+"</td></tr>");
+        userdata.append("<tr><td>"+u.getBirthPlace()+"</td></tr>");
+        userdata.append("<tr><td>Sun sign: "+"Libra"+"</td></tr><tr><td>Ascendant: "+angleAsc+"</td></tr>");
+        userdata.append("<tr><td>"+Util.dec2ddmmss(oi.getLatitudeDeg(),true)+" : "+Util.dec2ddmmss(oi.getLongitudeDeg(),false)+"</td></tr>");
+        userdata.append(closetablediv);
+        
+        // Aspects
+        Aspect.aspectsFactory().entrySet().forEach(k -> {
+            // Get colour of this Aspect
+            String aColor = "#"+Integer.toHexString(k.getValue().getAspectColor().getRGB()).substring(2);
+            // To HTML
+            aspectList.append("<tr><td><img src='"+k.getValue().getFileImage()+".png' width='18' height='18'></td><td style=\"padding-left:5px; color:"+aColor+"\">"+k.getValue().getName()+"</td><td style=\"text-align:right\">"+k.getValue().getDegreesDiff().getDegreesDiffExact()+"</td></tr>");
+        });
+        aspectList.append(closetablediv);
+        
+        // User cusps
+        for( Map.Entry<Integer,CuspPlusAngle> entry: hh.getCPAMap().entrySet() )
+        {
+            CuspPlusAngle e = entry.getValue();
+            switch( entry.getKey() )
+            {
+                default:
+                    houseNum = ""+entry.getKey(); break;
+                case ZhAttribute.ASCN:
+                    houseNum = "Asc."; break;
+                case ZhAttribute.ICN:
+                    houseNum = "IC"; break;
+                case ZhAttribute.DSCN:
+                    houseNum = "Desc."; break;
+                case ZhAttribute.MCN:
+                    houseNum = "MC"; break;
+            }
+            usercusps.append("<tr><td>"+houseNum+"</td><td>"+Util.houseDec2ddmmss(e.getName(),Math.toDegrees(e.getAngle()))+"</td><td>"+Util.dec2ddmmss(Math.toDegrees(e.getDecl()),Constants.LAT)+"</td></tr>");
+        }
+        usercusps.append(closetablediv);
+        
+        // User planets
+        for( Map.Entry<Integer,Planet> entry: planets.entrySet() )
+        {
+            Planet p = entry.getValue();
+            if( !p.forDisplay() ) continue;  // Non-displayable
+            
+            userplanets.append( "<td style=\"font-size:25px\">"+p.getSymbol()+"</td><td>"+p.getName()+"</td><td>"+99+
+                                "</td><td>"+Util.dec2ddmmss(p.getEclipticCoords().getLongitude(),Constants.LON)+"</td><td>"+Util.dec2ddmmss(p.getEclipticCoords().getLatitude(),Constants.LAT)+"</td><td>"+Util.dec2ddmmss(p.getDeclDegrees(),Constants.LAT)+"</td></tr>");
+        }
+        userplanets.append(closetablediv);
+        
+        // Planet aspects <Planet,Aspect>
+        DecimalFormat dfs = new DecimalFormat("#.##");
+        for( Map.Entry<Planet,List<PlanetsAspect>> entry: planetAspectMap.entrySet() )
+        {
+            Planet k = entry.getKey();
+            List<PlanetsAspect> v = entry.getValue();
+
+            // To HTML table
+            useraspects.append("<tr><td width=\"75\"><img src='"+ImagesUtil.image2HTML((BufferedImage)plDarkImgMap.get(k).getImage())+"' height='25' width='20'></td>");
+            v.forEach(a -> {
+                // Get colour of this Aspect
+                String aColor = "#"+Integer.toHexString(a.getAspect().getAspectColor().getRGB()).substring(2);
+                String bgColor = "";
+                if( a.getP2().getName().equalsIgnoreCase(Planet.AC) || a.getP2().getName().equalsIgnoreCase(Planet.MC) )
+                {
+                    aColor = "darkgray";
+                    bgColor = "#f2f3f4";
+                }
+                String divBorder = "solid";
+                if( a.getAspect().getName().equalsIgnoreCase(Constants.CONJUNCTION)) divBorder = "dotted";
+                
+                // Output Aspects table
+                useraspects.append("<td width=\"44\" style=\"font-size:12px\"><div style=\"border: 1px "+divBorder+" "+aColor+"; background-color:"+bgColor+"; padding:2px; width:40px; height:33px\"><div><img src='"+a.getAspect().getFileImage()+".png' height='15' width='15'> "+a.getP2().getSymbol()+"</div><div style=\"text-align:center\">"+dfs.format(a.getDegsDiff())+"\u00b0</div></div></td>");
+            });
+        }
+        useraspects.append("</tr>");
+        useraspects.append(closetablediv);
+        
+        // Write out user stuff
+        try( BufferedWriter writer = new BufferedWriter(new FileWriter(HTMLFILE)) )
+        {
+            writer.write(htmlHead);
+            writer.write("<div id='A' style=\"float:left; margin-left:10px\">");
+            writer.write("<div id='B'>");
+            writer.write("<div id='X' style=\"float:left; margin-bottom:10px\">");
+            writer.write(userdata.toString());
+            writer.write("</div><div id='Y' style=\"float:left; margin-left:10px\">");
+            writer.write(aspectList.toString());
+            writer.write("</div>");
+            writer.write(userplanets.toString());
+            writer.write("</div>");
+            writer.write("<div id='C' style=\"float:left; margin-left:10px\">");
+            writer.write(wheel);
+            writer.write("</div>");
+            writer.write("<div id='D' style=\"display: inline-block; vertical-align: top; margin-right:10px;\">");
+            writer.write(usercusps.toString());
+            writer.write(useraspects.toString());
+            writer.write("</div>");
+            writer.write(htmlClose);
+        }
+    }
 //------------------------------------------------------------------------------
 
     /*
@@ -863,16 +1414,26 @@ public class Ring implements ImageObserver
      * =======
      */
     public static void main(String[] args)
-            throws IOException, WheelGeometryException, RealTimeConversionException, NoInitException
+            throws IOException, WheelGeometryException, RealTimeConversionException, NoInitException, GeonamesNoResultsException, InvalidLocationException
     {
         // Initialise ring
-        int VIEWW = 800, VIEWH = 800;
+        int VIEWW = 600, VIEWH = 600;
         double RADIUS = 250.d, THICK = 75.d, LOGOR = 50.d, OFFX = 100.d, OFFY = 100.d;
         Ring ring = new Ring( VIEWH, VIEWW, new Point2D(OFFX,OFFY), RADIUS, THICK, LOGOR );
         
-        // Get all images
-        ring.init();
-        
+        // Initialise House/Cusp system
+        // **** Test data ****
+        // User
+        System.out.println("Initialise House/Cusp and Ring system...");
+        String name = "Fred Bloggs";
+        String placeName = "Gaborone, Botswana";
+        ring.ldt = LocalDateTime.of(LocalDate.of(1966,9,30), LocalTime.of(0,0));
+        User user = new User(name,placeName,ring.ldt,ChartType.PLACIDUS);
+
+        // Init ring (incl. HoroHouse, location[LatLon] and ObsInfo) and get all images
+        ring.systemInit();                                  // Should be in startup init
+        ring.init(user);
+
         // Set up graphics view
         SVGGraphics2D g2 = new SVGGraphics2D(ring.getVWidth(), ring.getVHeight());
         // Make lines smoother
@@ -880,7 +1441,7 @@ public class Ring implements ImageObserver
         
         // Scale the output (depends on device etc.)
         AffineTransform at = new AffineTransform();
-        at.scale(0.6, 0.6);
+        at.scale(0.8, 0.8);
         g2.setTransform(at);
         
         // ------------- TEST -----------------
@@ -896,133 +1457,98 @@ public class Ring implements ImageObserver
 //        ring.drawCuspBounds(g2);
 //        // Draw centre ring with logo
 //        ring.drawCentreRing(g2, new Color(133, 193, 233));
-        ring.drawWheel(g2);  // All of the above
+
+        // All of sections of ring
+        ring.drawWheel(g2);
+        // Output the userdata HTML
+        ring.outHTML();
 
         // Output
         SVGUtils.writeToSVG(new File(Constants.RESOURCEPATH+"tests/ring-test.svg"), g2.getSVGElement());
+
+        // Close g2
+        g2.dispose();
     }
 }
 
-//-----------------------------------Extend Image-------------------------------
-class ZImage
+//------------------------------------------------------------------------------
+class PlanetsAspect// implements Comparable<Planet>
 {
-    private final Image   image;
-    private final int     height, width;
-    private final Color   colour;
+    private final Planet  p1, p2;
+    private final Aspect  aspect;
+    private final double  degsDiff;
 
     /**
      * Constructor.
      * 
-     * @param image
-     * @param height
-     * @param width
-     * @param colour 
+     * @param p1
+     * @param p2
+     * @param aspect 
      */
-    public ZImage(Image image, int height, int width, Color colour)
+    public PlanetsAspect(Planet p1, Planet p2, Aspect aspect, double degsDiff)
     {
-        this.image = image;
-        this.height = height;
-        this.width = width;
-        this.colour = colour;
+        this.p1 = p1;
+        this.p2 = p2;
+        this.aspect = aspect;
+        this.degsDiff = degsDiff;
     }
 
-    public Image getImage() { return image; }
-    public int getHeight() { return height; }
-    public int getWidth() { return width; }
-    public Color getColour() { return colour; }
-}
-
-//-----------------------Test CuspPlusAngle-------------------------------------
-class Cpa
-{
-    private final double    angle;
-    private final int       num;
-    private final String    name;
-
-    // Borth, Wales
-    private final static Map<Integer,Cpa> cpaMap0 = new HashMap<Integer,Cpa>()
-        {{
-            put(0,new Cpa(0.380,3,"Can"));
-            put(1,new Cpa(0.1248,4,"Leo"));
-            put(2,new Cpa(0.4516,4,"Leo"));
-            put(3,new Cpa(0.3781,5,"Vir"));
-            put(4,new Cpa(0.5135,6,"Lib"));
-            put(5,new Cpa(0.2713,8,"Sag"));
-            put(6,new Cpa(0.3801,9,"Cap"));
-            put(7,new Cpa(0.12488,10,"Aqu"));
-            put(8,new Cpa(0.4516,10,"Aqu"));
-            put(9,new Cpa(0.378,11,"Pis"));
-            put(10,new Cpa(0.5135,0,"Ari"));
-            put(11,new Cpa(0.2713,2,"Gem"));
-        }};
+    /*
+     * Getters
+     */
+    public Planet getP1() { return p1; }
+    public Planet getP2() { return p2; }
+    public Aspect getAspect() { return aspect; }
+    public double getDegsDiff() { return degsDiff; }
     
-    // Dublin, Ireland
-    private final static Map<Integer,Cpa> cpaMap1 = new HashMap<Integer,Cpa>()
-        {{
-            put(0,new Cpa(0.380,3,"Can"));
-            put(1,new Cpa(0.1248,4,"Leo"));
-            put(2,new Cpa(0.4516,4,"Leo"));
-            put(3,new Cpa(0.3781,5,"Vir"));
-            put(4,new Cpa(0.5135,6,"Lib"));
-            put(5,new Cpa(0.2713,8,"Sag"));
-            put(6,new Cpa(0.3801,9,"Cap"));
-            put(7,new Cpa(0.12488,10,"Aqu"));
-            put(8,new Cpa(0.4516,10,"Aqu"));
-            put(9,new Cpa(0.378,11,"Pis"));
-            put(10,new Cpa(0.5135,0,"Ari"));
-            put(11,new Cpa(0.2713,2,"Gem"));
-        }};
     
-    // Recife, Brazil
-    private final static Map<Integer,Cpa> cpaMap2 = new HashMap<Integer,Cpa>()
-        {{
-            put(0,new Cpa(0.380,3,"Can"));
-            put(1,new Cpa(0.1248,4,"Leo"));
-            put(2,new Cpa(0.4516,4,"Leo"));
-            put(3,new Cpa(0.3781,5,"Vir"));
-            put(4,new Cpa(0.5135,6,"Lib"));
-            put(5,new Cpa(0.2713,8,"Sag"));
-            put(6,new Cpa(0.3801,9,"Cap"));
-            put(7,new Cpa(0.12488,10,"Aqu"));
-            put(8,new Cpa(0.4516,10,"Aqu"));
-            put(9,new Cpa(0.378,11,"Pis"));
-            put(10,new Cpa(0.5135,0,"Ari"));
-            put(11,new Cpa(0.2713,2,"Gem"));
-        }};
+    // Map to this
+    private final static Map<P1P2Key, PlanetsAspect> psaMap = new TreeMap<>();  // Order by P1 then P2
+    public static Map<P1P2Key,PlanetsAspect> getPsaMap() { return psaMap; }
+    public static void dumpPsaMap()
+    {
+        if( psaMap.isEmpty() ) return;
+        psaMap.forEach((k,v) -> {
+            System.out.println("psaMap..> " +k+":"+v);
+        });
+    }
     
-    // Gaborone, Botswana
-    private static Map<Integer,Cpa> cpaMap3 = new HashMap<Integer,Cpa>()
-        {{
-            put(0,new Cpa(0.407215,2,"Gem"));
-            put(1,new Cpa(0.442845,3,"Can"));
-            put(2,new Cpa(0.00491497,5,"Vir"));
-            put(3,new Cpa(0.07845,6,"Lib"));
-            put(4,new Cpa(0.07615,7,"Sco"));
-            put(5,new Cpa(0.52112779,7,"Sco"));
-            put(6,new Cpa(0.407215,8,"Sag"));
-            put(7,new Cpa(0.442845,9,"Cap"));
-            put(8,new Cpa(0.0049149,11,"Pis"));
-            put(9,new Cpa(0.07845,0,"Ari"));
-            put(10,new Cpa(0.07615475,1,"Tau"));
-            put(11,new Cpa(0.52112779,1,"Tau"));
-        }};
+    /*
+     * Map psaMap to Map by order of P1(index) (from Planet)
+     */
+    public static List<PlanetsAspect> psaList()
+    {
+        List<PlanetsAspect> psaList = new ArrayList<>(psaMap.values());
+        
+        Collections.sort(psaList, new PsAByP1());
+        return psaList;
+    }
     
     /**
-     * Constructor.
-     * 
-     * @param angle
-     * @param num
-     * @param name 
+     * Check key - and flipped key.
+     * @param p1
+     * @param p2
+     * @return 
      */
-    public Cpa( double angle, int num, String name )
+    public static boolean checkFlippedKey( Planet p1, Planet p2 )
     {
-        this.angle = angle;
-        this.num = num;
-        this.name = name;
+        return psaMap.containsKey(new P1P2Key(p1,p2)) || psaMap.containsKey(new P1P2Key(p2,p1) ); 
     }
     
-    public static Map<Integer,Cpa> getCpa() { return cpaMap3; }
-    public double getAngle() { return angle; }
-    public int getNum() { return num; }
-    public String getName() { return name; }
+    @Override
+    public String toString()
+    {
+        DecimalFormat dfs = new DecimalFormat("#.##");
+        return p1.getName()+":"+p2.getName()+" "+aspect.getName()+" "+dfs.format(degsDiff);
+    }
+}
+
+//------------------------------------------------------------------------------
+class PsAByP1 implements Comparator<PlanetsAspect>
+{
+    @Override
+    public int compare(PlanetsAspect a, PlanetsAspect b)
+    {
+        return a.getP1().getOrder() - b.getP1().getOrder();
+    }
 }

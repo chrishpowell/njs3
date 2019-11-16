@@ -6,8 +6,8 @@
  * \**************************************************************************** */
 package eu.discoveri.predikt.astronomy.library;
 
-import eu.discoveri.predikt.utils.TimeScale;
-import java.time.LocalDateTime;
+import eu.discoveri.predikt.utils.Constants;
+import eu.discoveri.predikt.utils.Util;
 
 
 public class AstroTest
@@ -25,80 +25,45 @@ public class AstroTest
         System.out.println(LunarCalc.summary(oi));
         System.out.println(LunarCalc.summaryPHL());
     }
+    
+    private static void outPlanet( PlanetData pde )
+            throws Exception
+    {
+        System.out.println(Planets.getPlanetmap().get(pde.planet())+": AltAzLon: " +Util.mod(Math.toDegrees(pde.getAltAzLon()),30.d) +
+        ", RADeg: " +Math.toDegrees(pde.getRightAscension()) + 
+        ", RAhms: " +Util.dec2hhmmssRA(Math.toDegrees(pde.getRightAscension())) + 
+        ", Decldms: " +Util.dec2ddmmss(Math.toDegrees(pde.getDeclination()),Constants.LAT) +
+        ", HAm: " +Math.toDegrees(pde.hourAngle()) +
+        ", PLonm: " +Math.toDegrees(pde.getPolarLon()) );
+    }
 
     public static void Punit()
             throws Exception
     {
-//        double jd = AstroDate.jd(new AstroDate(30,9,1966,12,30,0),false);
-        LocalDateTime ldt = LocalDateTime.of(1966,9,30, 0,0,0);
-        double jd = TimeScale.julianDayTimeClassic(ldt);
+        double jd = AstroDate.jd(new AstroDate(30,9,1966,22,30,0),false);
+        System.out.println("jd: " +jd);
+//        LocalDateTime ldt = LocalDateTime.of(1966,9,30, 4,30,0);
+//        double jd = TimeScale.julianDayTimeClassic(ldt);
         
-        ObsInfo oi = new ObsInfo(new Latitude(-24.75), new Longitude(-25.9167));
+        ObsInfo oi = new ObsInfo(new Latitude(-24.75), new Longitude(25.9167));
 
-        // Sun
+        // All bodies
         try
         {
-            PlanetData pde = new PlanetData(Planets.SUN, jd, oi);
-            System.out.println("Sun Lon = " + Math.toDegrees(pde.getEclipticLon()));
+            outPlanet(new PlanetData(Planets.SUN, jd, oi));
+            outPlanet(new PlanetData(Planets.LUNA, jd, oi));
+            outPlanet(new PlanetData(Planets.MERCURY, jd, oi));
+            outPlanet(new PlanetData(Planets.VENUS, jd, oi));
+            outPlanet(new PlanetData(Planets.MARS, jd, oi));
+            outPlanet(new PlanetData(Planets.JUPITER, jd, oi));
+            outPlanet(new PlanetData(Planets.SATURN, jd, oi));
+            outPlanet(new PlanetData(Planets.URANUS, jd, oi));
+            outPlanet(new PlanetData(Planets.NEPTUNE, jd, oi));
+            outPlanet(new PlanetData(Planets.PLUTO, jd, oi));
         }
         catch( NoInitException e )
         {
-            System.out.println("Error calculating Sun: " + e);
-        }
-
-        // Mars
-        try
-        {
-            PlanetData pdm = new PlanetData(Planets.MARS, jd, oi);
-            System.out.println("Mars Lon = " + Math.toDegrees(pdm.getEclipticLon()));
-        }
-        catch( NoInitException e )
-        {
-            System.out.println("Error calculating Mars: " + e);
-        }
-        
-        // Jupiter
-        try
-        {
-            PlanetData pdj = new PlanetData(Planets.JUPITER, jd, oi);
-            System.out.println("Jup Lon = " + Math.toDegrees(pdj.getEclipticLon()));
-        }
-        catch( NoInitException e )
-        {
-            System.out.println("Error calculating Jup: " + e);
-        }
-        
-        // Mercury
-        try
-        {
-            PlanetData pdmy = new PlanetData(Planets.MERCURY, jd, oi);
-            System.out.println("Merc Lon = " + Math.toDegrees(pdmy.getEclipticLon()));
-        }
-        catch( NoInitException e )
-        {
-            System.out.println("Error calculating Mercury: " + e);
-        }
-        
-        // Moon
-        try
-        {
-            PlanetData pdmn = new PlanetData(Planets.LUNA, jd, oi);
-            System.out.println("Moon Lon = " + Math.toDegrees(pdmn.getEclipticLon()));
-        }
-        catch( NoInitException e )
-        {
-            System.out.println("Error calculating Moon: " + e);
-        }
-
-        // Neptune
-        try
-        {
-            PlanetData pdmn = new PlanetData(Planets.NEPTUNE, jd, oi);
-            System.out.println("Nepune Lon = " + Math.toDegrees(pdmn.getEclipticLon()));
-        }
-        catch( NoInitException e )
-        {
-            System.out.println("Error calculating Moon: " + e);
+            System.out.println("Error calculating Body: " + e);
         }
     }
 }

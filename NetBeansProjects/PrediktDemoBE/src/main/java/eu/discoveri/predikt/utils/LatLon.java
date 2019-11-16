@@ -4,6 +4,7 @@
  */
 package eu.discoveri.predikt.utils;
 
+import eu.discoveri.predikt.exception.InvalidLocationException;
 import java.text.DecimalFormat;
 import javafx.geometry.Point2D;
 
@@ -15,7 +16,7 @@ import javafx.geometry.Point2D;
  */
 public class LatLon extends Point2D
 {
-    // Set default type (degrees or radians)
+    // Set default type (degrees)
     private boolean   inrads = false;
     
     /**
@@ -23,11 +24,26 @@ public class LatLon extends Point2D
      * 
      * @param latitude in degrees/radians (usually from geonames etc.)
      * @param longitude in degrees/radians
-     * @param inRadians default is true
+     * @param inRadians default is false
+     * @throws InvalidLocationException if exceeds +/- 2pi rads or +/- 360 degrees
      */
     public LatLon( double latitude, double longitude, boolean inRadians )
+            throws InvalidLocationException
     {
         super(latitude,longitude);
+        
+        // Validate input
+        if( inRadians )
+        {
+            if( Math.abs(longitude) > Constants.TWOPI || Math.abs(latitude) > Constants.TWOPI )
+                throw new InvalidLocationException("Latitude or Longitude exceeds +/- 2 pi radians");
+        }
+        else
+        {
+            if( Math.abs(longitude) > Constants.CCIRCLE || Math.abs(latitude) > Constants.CCIRCLE )
+                throw new InvalidLocationException("Latitude or Longitude exceeds +/- 360 degrees");
+        }
+        
         this.inrads = inRadians;
     }
     
@@ -36,8 +52,13 @@ public class LatLon extends Point2D
      * 
      * @param latitude in degrees (usually from geonames etc.)
      * @param longitude in degrees
+     * @throws InvalidLocationException @throws InvalidLocationException if exceeds +/- 360 degrees
      */
-    public LatLon( double latitude, double longitude ){ this(latitude,longitude,false); }
+    public LatLon( double latitude, double longitude )
+        throws InvalidLocationException
+    {
+        this(latitude,longitude,false);
+    }
     
     /**
      * Get the latitude.
@@ -151,6 +172,7 @@ public class LatLon extends Point2D
      * @param args 
      */
     public static void main(String[] args)
+            throws Exception
     {
         LatLon ll1 = new LatLon(23.671235,7.000199, false);
         LatLon ll2 = new LatLon(0.2750111,0.345678, false);

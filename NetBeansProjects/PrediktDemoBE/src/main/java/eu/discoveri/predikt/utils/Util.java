@@ -102,7 +102,7 @@ public class Util
     }
     
     /**
-     * Convert degrees decimal to hh mm' ss.ss"
+     * Convert degrees decimal to hh mm' ss" X
      * 
      * @param degdec
      * @param lat true if latitude N/S, otherwise E/W.
@@ -129,11 +129,11 @@ public class Util
             }
         
         // Convert to degs/mins/secs
-        int degs = (int)(degdec - Util.mod(degdec,1.0));
-        double mins = (degdec - degs)*60.d;
+        int hrs = (int)(degdec - Util.mod(degdec,1.0));
+        double mins = (degdec - hrs)*60.d;
         double secs = (mins - (int)mins)*60.d;
 
-        return degs+"\u00b0"+" "+(int)mins+"\u2032 "+dfs.format(secs)+"\u2033 "+hemi;
+        return hrs+"\u00b0"+" "+(int)mins+"\u2032 "+dfs.format(secs)+"\u2033 "+hemi;
     }
     
     /**
@@ -142,7 +142,7 @@ public class Util
      * @param degdec
      * @return 
      */
-    public static int[] dec2ddmm( double degdec )
+    public static int[] dec2ddmmRaw( double degdec )
     {
         int dd[]= new int[2];
         
@@ -156,7 +156,26 @@ public class Util
 
         return dd;
     }
-    
+
+    /**
+     * Convert degrees decimal to hh mm ss.ss
+     * 
+     * @param degdec 
+     * @return Hour/Min/Secs (Eg: Right Ascension)
+     */
+    public static RA dec2hhmmssRA( double degdec )
+    {
+        // Convert to degs/mins/secs
+        if( degdec < 0.d ) degdec += 360.d;
+        double degs = degdec/15.d;
+        
+        int hrs = (int)degs;
+        double mins = (degs - hrs)*60.d;
+        double secs = (mins - (int)mins)*60.d;
+
+        return new RA(hrs,(int)mins,secs);
+    }
+
     /**
      * Degree triple to radians.
      * 

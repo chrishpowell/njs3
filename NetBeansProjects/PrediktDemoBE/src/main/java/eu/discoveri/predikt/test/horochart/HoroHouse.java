@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.Map;
 
 
@@ -33,9 +34,27 @@ public class HoroHouse
     private final LocalDateTime     ldt;                                        // Birth date
     private LatLon                  place;
     private final String            placeName;
+    private User                    user;
 
-    // Cusps
-    private Map<Integer,CuspPlusAngle>    cpaMap;
+    // 'Empty' map for cusps
+    private static Map<Integer,CuspPlusAngle> cpaMap = new HashMap<Integer,CuspPlusAngle>()
+        {{
+            put(1,new CuspPlusAngle().setAttribute(ZhAttribute.ASC));
+            put(2,new CuspPlusAngle().setAttribute(ZhAttribute.UNDEF));
+            put(3,new CuspPlusAngle().setAttribute(ZhAttribute.UNDEF));
+            put(4,new CuspPlusAngle().setAttribute(ZhAttribute.IC));
+            put(5,new CuspPlusAngle().setAttribute(ZhAttribute.UNDEF));
+            put(6,new CuspPlusAngle().setAttribute(ZhAttribute.UNDEF));
+            put(7,new CuspPlusAngle().setAttribute(ZhAttribute.DSC));
+            put(8,new CuspPlusAngle().setAttribute(ZhAttribute.UNDEF));
+            put(9,new CuspPlusAngle().setAttribute(ZhAttribute.UNDEF));
+            put(10,new CuspPlusAngle().setAttribute(ZhAttribute.MC));
+            put(11,new CuspPlusAngle().setAttribute(ZhAttribute.UNDEF));
+            put(12,new CuspPlusAngle().setAttribute(ZhAttribute.UNDEF));
+        }};
+    
+    // Allow access to this map
+    public static Map<Integer,CuspPlusAngle> getCPAMap() { return cpaMap; }
 
 
     /**
@@ -45,11 +64,11 @@ public class HoroHouse
      * @param localdatetime
      * @param cpamap Map for cusps.
      */
-    public HoroHouse( String placename, LocalDateTime localdatetime, Map<Integer,CuspPlusAngle> cpamap )
+    public HoroHouse( User user )
     {
-        this.placeName = placename;
-        this.ldt = localdatetime;
-        this.cpaMap = cpamap;
+        this.placeName = user.getBirthPlace();
+        this.ldt = user.getBirthLDT();
+        this.user = user;
     }
 
     /**
@@ -357,6 +376,7 @@ public class HoroHouse
     public double getDeclMCRads() { return declMCRads; }
     public double getDeclAsc() { return declAsc; }
     public double getDeclAscRads() { return declAscRads; }
+    public User getUser() { return user; }
     public Map<Integer,CuspPlusAngle> getCpaMap() {  return cpaMap; }
 
  

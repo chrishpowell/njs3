@@ -2,14 +2,33 @@
  * PlanetData
  * \**************************************************************************** */
 package eu.discoveri.predikt.astronomy.library;
-//import android.util.Log;
+
+import eu.discoveri.predikt.utils.Constants;
+
 
 /**
  * This class handles planetary motion calculations and conversions.
  */
 public class PlanetData
-{
-    public static final double AU = 149597870.691;  // 1 AU km
+{   
+    // instance data
+    protected boolean m_initComplete;
+    protected int m_planet;
+
+    protected double m_jd;
+    protected double m_centuries;
+    protected double m_hourAngle;
+
+    protected double m_rightAscension;
+    protected double m_declination;
+
+    protected LocationElements g_polarLEs;		// Polar Coord-System Elemts of Earth  Variable inserted by Strickling
+    protected LocationElements m_polarLEs;		// Polar Coord-System Heliocentric
+    protected LocationElements m_eclipticLEs;	// Cartesian Coord-System
+    protected LocationElements m_equatorialLEs;	// Cartesian Coord-System
+    protected LocationElements m_altAzLEs;		// Cartesian Coord-System
+
+    private final static String NoInit = "Call PlanetData.calc() first.";
 
     /**
      * Default constructor.
@@ -25,13 +44,22 @@ public class PlanetData
      *
      * @param planet Planet number (from <TT>Planets</TT> class)
      * @param jd Julian day number
+     * @param deltaT ? in days
      * @param oi Observer location
      */
-    public PlanetData(int planet, double jd, double deltaT, ObsInfo oi) {
+    public PlanetData(int planet, double jd, double deltaT, ObsInfo oi)
+    {
         calc(planet, jd, deltaT, oi);
     }
 
-    public PlanetData(int planet, double jd, ObsInfo oi) {
+    /**
+     * 
+     * @param planet  Planet number (from <TT>Planets</TT> class)
+     * @param jd Julian day number
+     * @param oi  Observer location
+     */
+    public PlanetData(int planet, double jd, ObsInfo oi)
+    {
         calc(planet, jd, oi);
     }
 
@@ -44,7 +72,8 @@ public class PlanetData
      * @param jd Julian day number
      * @param oi Observer location
      */
-    public double calcLon(int planet, double jd, ObsInfo oi) {
+    public double calcLon(int planet, double jd, ObsInfo oi)
+    {
         if (Planets.SUN == planet) {
             planet = Planets.EARTH;
         }
@@ -58,35 +87,35 @@ public class PlanetData
         m_polarLEs = new LocationElements();
         // choose appropriate method, based on planet
         //
-        if (Planets.LUNA == planet) {
-            Lunar luna = new Lunar();
-            try {
-                luna.calcAllLEs(m_polarLEs, m_centuries);
-                m_polarLEs.setRadius(m_polarLEs.getRadius() / AU); // Convert from km to AU
-            } catch (NoInitException ni) {
-            }
-
-        } else if (Planets.PLUTO == planet) {
-            double[] lbr = new double[3];
-            Pluto2.ln_get_pluto_helio_coords(jd, lbr);
-            m_polarLEs.setLongitude(lbr[0]);
-            m_polarLEs.setLatitude(lbr[1]);
-            m_polarLEs.setRadius(lbr[2]);
-            //Pluto.calcAllLEs( m_polarLEs, m_centuries );
-        } else {
-            Vsop.calcAllLEs(m_polarLEs, m_centuries, planet);
-            if (Planets.EARTH == planet) {
-                /*
-        * What we _really_ want is the location of the sun as seen from
-        * the earth (geocentric view).  VSOP gives us the opposite
-        * (heliocentric) view, i.e., the earth as seen from the sun.
-        * To work around this, we add PI to the longitude (rotate 180 degrees)
-        * and negate the latitude.
-                 */
-                m_polarLEs.setLongitude(m_polarLEs.getLongitude() + Math.PI);
-                m_polarLEs.setLatitude(m_polarLEs.getLatitude() * -1D);
-            }
-
+        switch (planet) {
+            case Planets.LUNA:
+                Lunar luna = new Lunar();
+                try {
+                    luna.calcAllLEs(m_polarLEs, m_centuries);
+                    m_polarLEs.setRadius(m_polarLEs.getRadius() / Constants.AUKM); // Convert from km to AU
+                } catch (NoInitException ni) {
+                }   break;
+            case Planets.PLUTO:
+                double[] lbr = new double[3];
+                Pluto2.ln_get_pluto_helio_coords(jd, lbr);
+                m_polarLEs.setLongitude(lbr[0]);
+                m_polarLEs.setLatitude(lbr[1]);
+                m_polarLEs.setRadius(lbr[2]);
+                //Pluto.calcAllLEs( m_polarLEs, m_centuries );
+                break;
+            default:
+                Vsop.calcAllLEs(m_polarLEs, m_centuries, planet);
+                if (Planets.EARTH == planet) {
+                    /*
+                    * What we _really_ want is the location of the sun as seen from
+                    * the earth (geocentric view).  VSOP gives us the opposite
+                    * (heliocentric) view, i.e., the earth as seen from the sun.
+                    * To work around this, we add PI to the longitude (rotate 180 degrees)
+                    * and negate the latitude.
+                    */
+                    m_polarLEs.setLongitude(m_polarLEs.getLongitude() + Math.PI);
+                    m_polarLEs.setLatitude(m_polarLEs.getLatitude() * -1D);
+                }   break;
         }
         return m_polarLEs.getLongitude();
     }
@@ -99,14 +128,28 @@ public class PlanetData
      *
      * @param planet Planet number (from <TT>Planets</TT> class)
      * @param jd Julian day number
+     * @param deltaT ? in days
      * @param oi Observer location
      */
-    public void calc(int planet, double jd, double deltaT, ObsInfo oi) {
+    public void calc(int planet, double jd, double deltaT, ObsInfo oi)
+    {
         calc(planet, jd, deltaT, oi, true, true);
     }
 
-    // assumes deltaT = 0.0 for low precision purpose. (=> error in hour angle, if JD = TDT)
-    public void calc(int planet, double jd, ObsInfo oi) {
+    // 
+    /**
+     * Calculate the data for a given planet, julian day, and location.
+     * <BR>
+     * This function must be called (directly or via constructor) before calling
+     * any of the other functions in this class. Assumes deltaT = 0.0 for low
+     * precision purpose. (=> error in hour angle, if JD = TDT)
+     * 
+     * @param planet
+     * @param jd
+     * @param oi 
+     */
+    public void calc(int planet, double jd, ObsInfo oi)
+    {
         calc(planet, jd, 0.0, oi, false, false);
     }
 
@@ -123,7 +166,8 @@ public class PlanetData
      * @param topoc_Corr correct topocentric
      * @param lightT_Corr correct light time
      */
-    public void calc(int planet, double jd, double deltaT, ObsInfo oi, boolean topoc_Corr, boolean lightT_Corr) {
+    public void calc(int planet, double jd, double deltaT, ObsInfo oi, boolean topoc_Corr, boolean lightT_Corr)
+    {
         // There's a lot of calculating here, but one we need most often
         // is the last one (AltAzLoc), which depends on all the previous
         // calculations
@@ -199,10 +243,9 @@ public class PlanetData
                 }
             } // Calc lightTimeCorrection in days for passNo 2
             else {  // passNo == 1
-                final double LIGHTSPEED = 299792.458;   // km/s
                 lightTimeCorrection = Math.sqrt(
                         tmpVec[0] * tmpVec[0] + tmpVec[1] * tmpVec[1] + tmpVec[2] * tmpVec[2])
-                        * AU / (LIGHTSPEED * 86400.0);
+                        * Constants.AUKM / Constants.LIGHTDISTPERDAY;
             }
 
             passNo++;
@@ -249,8 +292,10 @@ public class PlanetData
      * @param localSiderealTime in radians
      * @param latRad Latitude in radians
      */
-    static void TopocReductionEqu(double cartVec[], // cartesian coordinates in AU
-            double localSiderealTime, double latRad) {
+    static void TopocReductionEqu(  double cartVec[], // cartesian coordinates in AU
+                                    double localSiderealTime,
+                                    double latRad   )
+    {
         final double AE = 149597870.691;  	// km
         final double R_EARTH = 6368;               // km mean Radius
 
@@ -260,7 +305,8 @@ public class PlanetData
         cartVec[1] -= tmpVec2[1];
         cartVec[2] -= tmpVec2[2];
 //	    Log.d ("TopRed", "TopRed  "  +localSiderealTime +"  " +Math.atan2(tmpVec2 [0], tmpVec2 [1]));
-    } //TopocReduction **************************************
+    }
+    
 
     /**
      * Reduces cartesian ecliptical coordinates from geocentric to topocentric
@@ -269,8 +315,11 @@ public class PlanetData
      * @param localSiderealTime in radians
      * @param latRad Latitude in radians
      */
-    protected static void TopocReductionEcl(double cartVec[], // cartesian coordinates in AU
-            double localSiderealTime, double latRad, double obliquity) {
+    protected static void TopocReductionEcl( double cartVec[], // cartesian coordinates in AU
+                                             double localSiderealTime,
+                                             double latRad,
+                                             double obliquity)
+    {
         final double AE = 149597870.691;  	// km
         final double R_EARTH = 6368;               // km mean Radius
 
@@ -280,14 +329,16 @@ public class PlanetData
         cartVec[0] -= tmpVec2[0];
         cartVec[1] -= tmpVec2[1];
         cartVec[2] -= tmpVec2[2];
-    } //TopocReduction **************************************
+    }
+    
 
     /**
      * Get the <TT>Planets</TT> number.
      *
      * Example: Planets.MERCURY
      */
-    public int planet() {
+    public int planet()
+    {
         return m_planet;
     }
 
@@ -295,55 +346,39 @@ public class PlanetData
      * Get the Julian day number.
      */
     public double jd()
-            throws NoInitException {
-        if (!m_initComplete) {
-            throw new NoInitException(NoInit);
-        }
-
+    {
         return m_jd;
     }
 
     /**
      * Get the hour angle.
      */
-    public double hourAngle() throws NoInitException {
-        if (!m_initComplete) {
-            throw new NoInitException(NoInit);
-        }
-
+    public double hourAngle()
+    {
         return m_hourAngle;
     }
 
     /**
      * Get the polar latitude. (Heliocentric polar coordinates)
      */
-    public double getPolarLat() throws NoInitException {
-        if (!m_initComplete) {
-            throw new NoInitException(NoInit);
-        }
-
+    public double getPolarLat()
+    {
         return m_polarLEs.getLatitude();
     }
 
     /**
      * Get the polar longitude. (Heliocentric polar coordinates)
      */
-    public double getPolarLon() throws NoInitException {
-        if (!m_initComplete) {
-            throw new NoInitException(NoInit);
-        }
-
+    public double getPolarLon()
+    {
         return m_polarLEs.getLongitude();
     }
 
     /**
      * Get the polar radius. (Distance to sun)
      */
-    public double getPolarRadius() throws NoInitException {
-        if (!m_initComplete) {
-            throw new NoInitException(NoInit);
-        }
-
+    public double getPolarRadius()
+    {
         return m_polarLEs.getRadius();
     }
 
@@ -351,11 +386,10 @@ public class PlanetData
      * Get the Solar ecliptic latitude in radians (Geocentric ecliptical
      * coordinates of the Sun, usually close to zero)
      */
-    public double getSolarLat() throws NoInitException {
-        if (!m_initComplete) {
-            throw new NoInitException(NoInit);
-        }
-        if (g_polarLEs.getRadius() == -1) {
+    public double getSolarLat()
+    {
+        if (g_polarLEs.getRadius() == -1)
+        {
             Vsop.calcAllLEs(g_polarLEs, m_centuries, Planets.EARTH);
         }
         return -g_polarLEs.getLatitude();
@@ -364,11 +398,10 @@ public class PlanetData
     /**
      * Get the geocentric ecliptic longitude of the Sun in radians
      */
-    public double getSolarLon() throws NoInitException {
-        if (!m_initComplete) {
-            throw new NoInitException(NoInit);
-        }
-        if (g_polarLEs.getRadius() == -1) {
+    public double getSolarLon()
+    {
+        if (g_polarLEs.getRadius() == -1)
+        {
             Vsop.calcAllLEs(g_polarLEs, m_centuries, Planets.EARTH);
         }
         return g_polarLEs.getLongitude() + Math.PI;
@@ -377,11 +410,10 @@ public class PlanetData
     /**
      * Get the solar radius of the Earth. (Distance Earth to Sun)
      */
-    public double getSolarRadius() throws NoInitException {
-        if (!m_initComplete) {
-            throw new NoInitException(NoInit);
-        }
-        if (g_polarLEs.getRadius() == -1) {
+    public double getSolarRadius()
+    {
+        if (g_polarLEs.getRadius() == -1)
+        {
             Vsop.calcAllLEs(g_polarLEs, m_centuries, Planets.EARTH);
         }
         return g_polarLEs.getRadius();
@@ -390,11 +422,8 @@ public class PlanetData
     /**
      * Get the geocentric ecliptic cartesian Coords x, y, z. Add. by Strickling
      */
-    public LocationElements getEclipticXYZ() throws NoInitException {
-        if (!m_initComplete) {
-            throw new NoInitException(NoInit);
-        }
-
+    public LocationElements getEclipticXYZ()
+    {
         // Add by Strickling
         return m_eclipticLEs;
     }
@@ -403,11 +432,8 @@ public class PlanetData
      * Get the ecliptic latitude. Mod. by Strickling, geocentric polar
      * coordinates
      */
-    public double getEclipticLat() throws NoInitException {
-        if (!m_initComplete) {
-            throw new NoInitException(NoInit);
-        }
-
+    public double getEclipticLat()
+    {
         // Modification by Strickling, Here is polar conversion needed!
         // return m_eclipticLEs.getLatitude();
         return Math.atan2(m_eclipticLEs.getZ(), Math.sqrt(m_eclipticLEs.getX() * m_eclipticLEs.getX()
@@ -418,11 +444,8 @@ public class PlanetData
      * Get the ecliptic longitude. Mod. by Strickling, geocentric polar
      * coordinates in radians
      */
-    public double getEclipticLon() throws NoInitException {
-        if (!m_initComplete) {
-            throw new NoInitException(NoInit);
-        }
-
+    public double getEclipticLon()
+    {
         // Modification by Strickling, Here is polar conversion needed!
         // return m_eclipticLEs.getLongitude();
         return Math.atan2(m_eclipticLEs.getY(), m_eclipticLEs.getX());
@@ -431,11 +454,8 @@ public class PlanetData
     /**
      * Get the ecliptic radius. Mod. by Strickling, Distance to Earth
      */
-    public double getEclipticRadius() throws NoInitException {
-        if (!m_initComplete) {
-            throw new NoInitException(NoInit);
-        }
-
+    public double getEclipticRadius()
+    {
         // Modification by Strickling, Here is polar conversion needed!
         // return m_eclipticLEs.getRadius();
         return Math.sqrt(m_eclipticLEs.getX() * m_eclipticLEs.getX()
@@ -446,44 +466,32 @@ public class PlanetData
     /**
      * Get the equatorial latitude (y). Cartesian Coord-System
      */
-    public double getEquatorialLat() throws NoInitException {
-        if (!m_initComplete) {
-            throw new NoInitException(NoInit);
-        }
-
+    public double getEquatorialLat()
+    {
         return m_equatorialLEs.getLatitude();
     }
 
     /**
      * Get the equatorial longitude (x). Cartesian Coord-System
      */
-    public double getEquatorialLon() throws NoInitException {
-        if (!m_initComplete) {
-            throw new NoInitException(NoInit);
-        }
-
+    public double getEquatorialLon()
+    {
         return m_equatorialLEs.getLongitude();
     }
 
     /**
      * Get the equatorial radius (z). Cartesian Coord-System
      */
-    public double getEquatorialRadius() throws NoInitException {
-        if (!m_initComplete) {
-            throw new NoInitException(NoInit);
-        }
-
+    public double getEquatorialRadius()
+    {
         return m_equatorialLEs.getRadius();
     }
 
     /**
      * Get the Alt-Az latitude. (Converted into polar coordinates)
      */
-    public double getAltAzLat() throws NoInitException {
-        if (!m_initComplete) {
-            throw new NoInitException(NoInit);
-        }
-
+    public double getAltAzLat()
+    {
         // Modification by Strickling, Here is polar conversion needed!
         // return m_altAzLEs.getLatitude();
         return Math.atan2(m_altAzLEs.getZ(), Math.sqrt(m_altAzLEs.getX() * m_altAzLEs.getX()
@@ -494,11 +502,8 @@ public class PlanetData
      * Get the Alt-Az longitude. Radians, south is 0 deg (Converted into polar
      * coordinates)
      */
-    public double getAltAzLon() throws NoInitException {
-        if (!m_initComplete) {
-            throw new NoInitException(NoInit);
-        }
-
+    public double getAltAzLon() throws NoInitException
+    {
         // Modification by Strickling, Here is polar conversion needed!
         // return m_altAzLEs.getLongitude();
         return Math.atan2(m_altAzLEs.getY(), m_altAzLEs.getX());
@@ -507,11 +512,8 @@ public class PlanetData
     /**
      * Get the Alt-Az radius. (Converted into polar coordinates)
      */
-    public double getAltAzRadius() throws NoInitException {
-        if (!m_initComplete) {
-            throw new NoInitException(NoInit);
-        }
-
+    public double getAltAzRadius()
+    {
         // Modification by Strickling, Here is polar conversion needed!
         // return m_altAzLEs.getRadius();
         return Math.sqrt(m_altAzLEs.getX() * m_altAzLEs.getX()
@@ -522,41 +524,16 @@ public class PlanetData
     /**
      * Get the right ascension in radians.
      */
-    public double getRightAscension() throws NoInitException {
-        if (!m_initComplete) {
-            throw new NoInitException(NoInit);
-        }
-
+    public double getRightAscension()
+    {
         return m_rightAscension;
     }
 
     /**
      * Get the declination in radians.
      */
-    public double getDeclination() throws NoInitException {
-        if (!m_initComplete) {
-            throw new NoInitException(NoInit);
-        }
-
+    public double getDeclination()
+    {
         return m_declination;
     }
-
-    // instance data
-    protected boolean m_initComplete;
-    protected int m_planet;
-
-    protected double m_jd;
-    protected double m_centuries;
-    protected double m_hourAngle;
-
-    protected double m_rightAscension;
-    protected double m_declination;
-
-    protected LocationElements g_polarLEs;		// Polar Coord-System Elemts of Earth  Variable inserted by Strickling
-    protected LocationElements m_polarLEs;		// Polar Coord-System Heliocentric
-    protected LocationElements m_eclipticLEs;	// Cartesian Coord-System
-    protected LocationElements m_equatorialLEs;	// Cartesian Coord-System
-    protected LocationElements m_altAzLEs;		// Cartesian Coord-System
-
-    private final static String NoInit = "Call PlanetData.calc() first.";
 }
