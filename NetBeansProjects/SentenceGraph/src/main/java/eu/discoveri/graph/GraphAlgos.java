@@ -5,13 +5,13 @@
  */
 package eu.discoveri.graph;
 
-import eu.discoveri.elements.Sentence;
-import eu.discoveri.elements.Token;
 import eu.discoveri.exceptions.EmptySentenceListException;
-
 import eu.discoveri.exceptions.SentenceIsEmptyException;
 import eu.discoveri.exceptions.TokensCountInSentencesIsZeroException;
 import eu.discoveri.exceptions.TokensListIsEmptyException;
+
+import eu.discoveri.elements.Sentence;
+import eu.discoveri.elements.Token;
 import eu.discoveri.sentenceanalysis.CountQR;
 import eu.discoveri.sentenceanalysis.Nul;
 
@@ -20,8 +20,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-import opennlp.tools.postag.POSTaggerME;
 
+import opennlp.tools.postag.POSTaggerME;
 import opennlp.tools.tokenize.TokenizerME;
 
 
@@ -32,15 +32,14 @@ import opennlp.tools.tokenize.TokenizerME;
  */
 public class GraphAlgos
 {
-    // Converged? flag
-    private static double                       totConverge = Double.MAX_VALUE;
-        
     // Map of common words per sentence pair:<String,CountQR> (Word/token + counts)
     private static Map<AbstractMap.SimpleEntry<Sentence,Sentence>,Map<String,CountQR>>  commonWords = new HashMap<>();
     // Sentence similarity score
     private static Map<AbstractMap.SimpleEntry<Sentence,Sentence>,Double>               QRscore = new HashMap<>();
     // Similarity score
     private static double                       score = 0.d;
+    // Converged? flag
+    private static double                       totConverge = Double.MAX_VALUE;
     
     // Number sentences in which each word appears.  The mapping allows multikey, eg: A:B, A:C etc.
     private static Map<String,Map<String,Nul>>  tokSentCount = new HashMap<>();
@@ -51,32 +50,75 @@ public class GraphAlgos
     
     // Sentences to analyze
     private final List<Sentence>                sents;
-    // Limit what tokens are attached to sentence
-    private final boolean                       limitTokenType;
     
     
     /**
      * Constructor.
      * @param sents 
      */
-    public GraphAlgos( List<Sentence> sents, boolean limitTokenType )
+    public GraphAlgos( List<Sentence> sents )
     {
         this.sents = sents;
-        this.limitTokenType = limitTokenType;
     }
     
     /**
      * Get POS for each token.
      * 
-     * @param pme
+     * @param pme POSTagger
      * @return
+     * @throws EmptySentenceListException
      * @throws TokensListIsEmptyException 
      */
-    public List<Sentence> posTagSentences(POSTaggerME pme)
-            throws TokensListIsEmptyException
+    public List<Sentence> posTagSentenceCorpus(POSTaggerME pme)
+            throws EmptySentenceListException, TokensListIsEmptyException
     {
-        for( Sentence sn: sents )
-            sn.posTagThisSentence(pme);
+        // Check we have sentences
+        if( sents.isEmpty() )
+            throw new EmptySentenceListException("Need sentences to process! GraphAlgos:tokenizeSentenceCorpus()");
+        
+        for( Sentence s: sents )
+            s.posTagThisSentence(pme);
+        
+        return sents;
+    }
+    
+    /**
+     * Tokenize all sentences.
+     * 
+     * @param tme Tokenizer
+     * @return
+     * @throws EmptySentenceListException
+     * @throws SentenceIsEmptyException 
+     */
+    public List<Sentence> tokenizeSentenceCorpus(TokenizerME tme)
+            throws EmptySentenceListException, SentenceIsEmptyException
+    {
+        // Check we have sentences
+        if( sents.isEmpty() )
+            throw new EmptySentenceListException("Need sentences to process! GraphAlgos:tokenizeSentenceCorpus()");
+        
+        for( Sentence s: sents )
+            s.tokenizeThisSentence(tme);
+        
+        return sents;
+    }
+    
+    /**
+     * Remove tokens that do not match reqd. POS tags.
+     * 
+     * @return
+     * @throws EmptySentenceListException
+     * @throws TokensListIsEmptyException 
+     */
+    public List<Sentence> filterPOStags()
+            throws EmptySentenceListException, TokensListIsEmptyException
+    {
+        // Check we have sentences
+        if( sents.isEmpty() )
+            throw new EmptySentenceListException("Need sentences to process! GraphAlgos:filterPOStags()");
+        
+        for( Sentence s: sents )
+            s.cullPOSTagsNToks();
         
         return sents;
     }
@@ -84,27 +126,20 @@ public class GraphAlgos
     /**
      * Same word/token counting per sentence pair.
      * 
-     * @param tme
      * @return 
-     * @throws SentenceIsEmptyException 
      * @throws EmptySentenceListException 
      */
-    public List<Sentence> counting(TokenizerME tme)
-            throws SentenceIsEmptyException, EmptySentenceListException
+    public List<Sentence> counting()
+            throws EmptySentenceListException
     {
-        // Check sentences
+        // Check we have sentences
         if( sents.isEmpty() )
-            throw new EmptySentenceListException("Need sentences to process!");
+            throw new EmptySentenceListException("Need sentences to process! GraphAlgos:counting()");
         
         /*
-         * Tokenize and sort sentences by tokens count (long to short)
+         * Sort sentences by tokens' count (long to short hence s2 - s1)
          * Allows sentence matching to work efficiently/properly
          */
-        // Tokenize all sentences
-        for( Sentence sn: sents )
-            { sn.tokenizeThisSentence(tme); }
-        
-        // Sort sentences by size (largest first hence s2 - s1)
         List<Sentence> nodeList = sents.stream()
                         .sorted((s1,s2) -> s2.getTokens().size()-s1.getTokens().size())
                         .collect(Collectors.toList());

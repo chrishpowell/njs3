@@ -90,7 +90,7 @@ public class Populate
         for( String sent: sdme.sentDetect(doc) )
         {
             // Create a roughly unique name
-            String uname = "S"+idx+System.currentTimeMillis();
+            String uname = "S"+idx+"T"+System.currentTimeMillis();
             
             // Add sentence text to new Sentence
             Sentence s = new Sentence(uname,sent);

@@ -15,6 +15,7 @@ import eu.discoveri.lemmatizer.SimpleLemmatizer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -122,8 +123,7 @@ public class Sentence
 
 
     /**
-     * Tokenise the sentence into tokens.
-     * @TODO: Get rid of stop words.
+     * Tokenise the sentence.
      * 
      * @param tme
      * @return
@@ -134,15 +134,17 @@ public class Sentence
     {
         // No sentence?
         if( text.isEmpty() )
-            throw new SentenceIsEmptyException();
+            throw new SentenceIsEmptyException("tokenizeThisSentence() ");
         
         // Add tokens to (Token) List with probabilites
         Arrays.asList(tme.tokenize(this.text.toLowerCase())).forEach(tok-> {
             // New token
             Token t = new Token(tok);
+            
             // Add token to list
             tokens.add(t);
         });
+        
         
         return tokens;
     }
@@ -159,17 +161,47 @@ public class Sentence
     {
         // No tokens?
         if( tokens.isEmpty() )
-            throw new TokensListIsEmptyException();
+            throw new TokensListIsEmptyException("No tokens, postagThisSentence()");
         
         // Get list of POStags
         Token[] toks = tokens.toArray(new Token[0]);
-        String[] pts = pme.tag(tokens.stream().map(t -> t.getToken()).toArray(String[]::new));
+        String[] ptags = pme.tag(tokens.stream().map(t -> t.getToken()).toArray(String[]::new));
         
         // Map into Token class
-        for( int ii=0; ii<pts.length; ii++ ) { toks[ii].setPos(pts[ii]); }
-
+        for( int ii=0; ii<ptags.length; ii++ )
+            toks[ii].setPos(ptags[ii]);
+        
         // Convert to List
-        return Arrays.asList(pts);
+        return Arrays.asList(ptags);
+    }
+    
+    /**
+     * Ditch tags and tokens not matching POS tag list (test()).
+     * 
+     * @return 
+     * @throws TokensListIsEmptyException 
+     */
+    public List<Token> cullPOSTagsNToks()
+            throws TokensListIsEmptyException
+    {
+        // No tokens?
+        if( tokens.isEmpty() )
+            throw new TokensListIsEmptyException("No tokens, cullPOSTagsNToks()");
+    
+        for( Iterator<Token> iter = tokens.listIterator(); iter.hasNext(); )
+        {
+            Token t = iter.next();
+            if( !t.test(Void.TYPE) )
+            {
+                iter.remove();
+            }
+        }
+        
+        System.out.println("...> " +this.name+ ": " +this.text);
+        System.out.println("...> Tokens: ");
+        tokens.forEach(t -> System.out.println("   "+t.getToken()));
+        
+        return tokens;
     }
     
     /**
@@ -203,7 +235,7 @@ public class Sentence
     {
         // No tokens?
         if( tokens.isEmpty() )
-            throw new TokensListIsEmptyException();
+            throw new TokensListIsEmptyException("No tokens, addSequences2Sentence(): " +this.name);
 
         // Get tokens into String array
         String[] stoks = new String[tokens.size()];
@@ -229,7 +261,7 @@ public class Sentence
     {
         // No sentence?
         if( text.isEmpty() )
-            throw new SentenceIsEmptyException();
+            throw new SentenceIsEmptyException("Empty sentence, spanThisSentence() " +this.name);
         
         // Put spans in List
         spans.addAll(Arrays.asList(tme.tokenizePos(this.text)));
@@ -267,7 +299,7 @@ public class Sentence
     {
         // No tokens?
         if( tokens.isEmpty() )
-            throw new TokensListIsEmptyException();
+            throw new TokensListIsEmptyException("No tokens, lemmatizeThisSentence() " +this.name);
         
         // Get token strings into List
         List<String> toks = tokens.stream().map(t -> t.getToken()).collect(Collectors.toList());
@@ -292,17 +324,17 @@ public class Sentence
      * @TODO: Add probabilities etc.
      * @return Ordered set of Queries
      */
-    public Set<Query> buildSentenceQuerySet( boolean limitTokType )
+    public Set<Query> buildSentenceQuerySet()
             throws TokensCountInSentencesIsZeroException
     {
+        // Has sentence been processed?
+        if( this.getTokens().isEmpty() )
+            throw new TokensCountInSentencesIsZeroException("No tokens, buildSentenceQuerySet()/process sentence: " +this.name+ "!");
+        
         // Ordered Set of Queries (same order out as entered)
         Set<Query> lhs = new LinkedHashSet<>();
         // Map for tokens
         Map<String,Object> ps = new HashMap<>();
-        
-        // Has sentence been processed?
-        if( this.getTokens().isEmpty() )
-            throw new TokensCountInSentencesIsZeroException("No tokens, process sentence: " +this.name+ "!");
         
         // Add first query (create)
         String s = "CREATE ("+params.get("name")+":Sentence) SET "+params.get("name")+"={name:$name,namespace:$namespace,uuid:$uuid,text:$text,score:$score,prevScore:$prevScore}";
@@ -314,7 +346,7 @@ public class Sentence
         for( Token t: tokens )
         {
             // Include-only adjectives or nouns
-            if( !limitTokType && t.test(Void.TYPE) )
+            if( t.test(Void.TYPE) )
             {
                 q0.append("CREATE (t").append(idx).append(this.name)
                         .append(":Token {text:$text").append(idx)

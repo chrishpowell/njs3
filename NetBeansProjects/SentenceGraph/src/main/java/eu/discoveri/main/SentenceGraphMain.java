@@ -5,10 +5,12 @@
  */
 package eu.discoveri.main;
 
-import eu.discoveri.config.Constants;
 import eu.discoveri.exceptions.EmptySentenceListException;
 import eu.discoveri.exceptions.SentenceIsEmptyException;
 import eu.discoveri.exceptions.TokensCountInSentencesIsZeroException;
+import eu.discoveri.exceptions.TokensListIsEmptyException;
+
+import eu.discoveri.config.Constants;
 import eu.discoveri.graph.GraphSentences;
 import eu.discoveri.graph.Graphing;
 
@@ -34,7 +36,7 @@ public class SentenceGraphMain
         
         // Start the sentence graph
         try { GraphSentences.startGraph(); }
-        catch( TokensCountInSentencesIsZeroException | FileNotFoundException | SentenceIsEmptyException | EmptySentenceListException ex )
+        catch( TokensCountInSentencesIsZeroException | FileNotFoundException | SentenceIsEmptyException | EmptySentenceListException | TokensListIsEmptyException ex )
             { System.out.println("FATAL!! "+ex.toString()); }
         catch( IOException iox )
             { System.out.println("FATAL!! "+iox.toString()); }

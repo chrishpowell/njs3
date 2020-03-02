@@ -37,12 +37,12 @@ public class GraphSentences
      * @returns the result
      * @return 
      */
-    private static void persistSentenceNode( Sentence sn, boolean limitTokType )
+    private static void persistSentenceNode( Sentence sn )
             throws TokensCountInSentencesIsZeroException
     {
         try( Session sess = Graphing.getDriver().session(Graphing.getSessionCfg()) )
         {
-            Set<Query> qs = sn.buildSentenceQuerySet(limitTokType);
+            Set<Query> qs = sn.buildSentenceQuerySet();
             qs.forEach(q -> sess.run(q,Graphing.getTxCfg()));
         }
     }
@@ -92,21 +92,28 @@ public class GraphSentences
         // Set up sentence analysis
         GraphAlgos gas = new GraphAlgos( ls );
         
-        // Tokenize sentences, calculate common word count and
-        // do the token counting per sentence pair (QRscore) [Updates each sentence]
-        gas.counting(popl.getTme());
+        // Tokenize sentences
+        gas.tokenizeSentenceCorpus(popl.getTme());
         
-        // Now determine POOS of each token
-        gas.posTagSentences(popl.getPme());
+        // Now determine POS tag (NN,NNS etc.) of each token
+        gas.posTagSentenceCorpus(popl.getPme());
+        
+        // Remove tokens that don't match reqd. POS tags
+        gas.filterPOStags();
+        
+        // Now calculate common word count between sentences and
+        // do the token counting per sentence pair (QRscore) [Updates each sentence]
+        gas.counting();
         
         // Calculate the similarity score between sentences (QRscore) [Updates each sentence]
         gas.similarity();
         
-        /* Populate db */
+        /*
+         * Now populate db
+         */
         // Nodes
-        boolean limitTokType = true;
         for( Sentence s: ls )
-            persistSentenceNode(s,limitTokType);
+            persistSentenceNode(s);
 
         // Edges
         gas.getQRscores().forEach((k,v) -> {
