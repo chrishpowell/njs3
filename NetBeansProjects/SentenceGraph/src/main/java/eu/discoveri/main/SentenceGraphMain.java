@@ -11,6 +11,8 @@ import eu.discoveri.exceptions.TokensCountInSentencesIsZeroException;
 import eu.discoveri.exceptions.TokensListIsEmptyException;
 
 import eu.discoveri.config.Constants;
+import eu.discoveri.exceptions.ListLengthsDifferException;
+import eu.discoveri.exceptions.POSTagsListIsEmptyException;
 import eu.discoveri.graph.GraphSentences;
 import eu.discoveri.graph.Graphing;
 
@@ -36,7 +38,13 @@ public class SentenceGraphMain
         
         // Start the sentence graph
         try { GraphSentences.startGraph(); }
-        catch( TokensCountInSentencesIsZeroException | FileNotFoundException | SentenceIsEmptyException | EmptySentenceListException | TokensListIsEmptyException ex )
+        catch(  TokensCountInSentencesIsZeroException |
+                FileNotFoundException |
+                SentenceIsEmptyException |
+                EmptySentenceListException |
+                TokensListIsEmptyException |
+                ListLengthsDifferException |
+                POSTagsListIsEmptyException ex )
             { System.out.println("FATAL!! "+ex.toString()); }
         catch( IOException iox )
             { System.out.println("FATAL!! "+iox.toString()); }

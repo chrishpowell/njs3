@@ -16,8 +16,10 @@ import eu.discoveri.elements.Token;
 import eu.discoveri.lemmatizer.SimpleLemmatizer;
 
 import eu.discoveri.exceptions.ListLengthsDifferException;
+import eu.discoveri.exceptions.POSTagsListIsEmptyException;
 import eu.discoveri.exceptions.SentenceIsEmptyException;
 import eu.discoveri.exceptions.TokensListIsEmptyException;
+import java.util.stream.Collectors;
 
 import opennlp.tools.postag.POSModel;
 import opennlp.tools.postag.POSTaggerME;
@@ -165,17 +167,16 @@ public class Populate
      * Get the lemmas of tokens of the sentence (via SimpleLemmatizer).
      * 
      * @param s
-     * @param tokens
-     * @param posTags
      * @param match2NN
      * @return
      * @throws TokensListIsEmptyException 
+     * @throws POSTagsListIsEmptyException 
      * @throws ListLengthsDifferException 
      */
-    public Map<String,String> lemmasOfSentence( Sentence s, List<Token> tokens, List<String> posTags, boolean match2NN )
-            throws TokensListIsEmptyException, ListLengthsDifferException
-    {
-        return s.lemmatizeThisSentence(sl, tokens, posTags, match2NN);
+    public Map<String,String> lemmasOfSentence( Sentence s, boolean match2NN )
+            throws TokensListIsEmptyException, POSTagsListIsEmptyException, ListLengthsDifferException
+    {   
+        return s.lemmatizeThisSentence(sl, match2NN);
     }
 
     

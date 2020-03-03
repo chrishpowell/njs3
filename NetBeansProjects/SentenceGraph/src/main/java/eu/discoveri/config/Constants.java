@@ -58,7 +58,7 @@ public class Constants
     // Transaction max. duration
     public static final int         TXDURATION = 30;                            // Secs
     // If sentence edge weight too small do not add
-    public static final double      EDGEWEIGHTMIN = 0.001;
+    public static final double      EDGEWEIGHTMIN = 0.01;
     // Virtual servers
     public static final String      VSRV1 = "localhost";
     public static final int         PORT1 = 7687;

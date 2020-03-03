@@ -7,10 +7,11 @@ package eu.discoveri.elements;
 
 import eu.discoveri.config.Constants;
 import eu.discoveri.exceptions.ListLengthsDifferException;
+import eu.discoveri.exceptions.POSTagsListIsEmptyException;
 import eu.discoveri.exceptions.SentenceIsEmptyException;
 import eu.discoveri.exceptions.TokensCountInSentencesIsZeroException;
 import eu.discoveri.exceptions.TokensListIsEmptyException;
-import eu.discoveri.lemmatizer.SimpleLemmatizer;
+import eu.discoveri.lemmatizer.Lemmatizer;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -51,8 +52,10 @@ public class Sentence
 
     // Scoring for this node
     private double                      score, prevScore;
-    // Tokens/lemmas of the sentence
+    // Tokens: POStags/lemmas of the sentence
     private List<Token>                 tokens = new ArrayList<>();
+    // Lemmatized tokens
+    private Map<String,String>          lemmas;                
     // Spans
     private final List<Span>            spans = new ArrayList<>();
     // Sequences
@@ -198,8 +201,8 @@ public class Sentence
         }
         
         System.out.println("...> " +this.name+ ": " +this.text);
-        System.out.println("...> Tokens: ");
-        tokens.forEach(t -> System.out.println("   "+t.getToken()));
+        System.out.println("...> Tokens/Lemmas: ");
+        tokens.forEach(t -> System.out.println("   "+t.getToken()+ "/" +t.getLemma()));
         
         return tokens;
     }
@@ -286,36 +289,27 @@ public class Sentence
     /**
      * Get lemmas of the tokens.
      * 
-     * @param sl
-     * @param tokens
+     * @param lemmer
      * @param match2NN
-     * @param posTags
      * @return 
      * @throws TokensListIsEmptyException 
      * @throws ListLengthsDifferException 
+     * @throws POSTagsListIsEmptyException 
      */
-    public Map<String,String> lemmatizeThisSentence( SimpleLemmatizer sl, List<Token> tokens, List<String> posTags, boolean match2NN )
-            throws TokensListIsEmptyException, ListLengthsDifferException
+    public Map<String,String> lemmatizeThisSentence( Lemmatizer lemmer, boolean match2NN )
+            throws TokensListIsEmptyException, ListLengthsDifferException, POSTagsListIsEmptyException
     {
-        // No tokens?
-        if( tokens.isEmpty() )
-            throw new TokensListIsEmptyException("No tokens, lemmatizeThisSentence() " +this.name);
-        
         // Get token strings into List
         List<String> toks = tokens.stream().map(t -> t.getToken()).collect(Collectors.toList());
+        List<String> tags = tokens.stream().map(t -> t.getPOS()).collect(Collectors.toList());
 
         /*
          * Form lemmas from <token string,POStag> 'key' into dictionary.
          * Throws exception if List lengths differ
          */
-        Map<String,String> lems = sl.lemmatize(toks, posTags, match2NN);
-        
-        // Update Tokens (class) with lemmas
-        tokens.forEach(t -> {
-            t.setLemma(lems.get(t.getToken()));
-        });
+        lemmas = lemmer.lemmatize(toks, tags, match2NN);
 
-        return lems;
+        return lemmas;  // *********************** UPDATE Token (Tokens + Lemmas)! *******************
     }
     
     /**
@@ -406,7 +400,6 @@ public class Sentence
     {
         throw new UnsupportedOperationException("Sentence and all sub-objects cannot be updated");
     }
-
     
     /**
      * Get this sentence text.
@@ -447,6 +440,18 @@ public class Sentence
      * @return 
      */
     public UUID getUuid() { return uuid; }
+    
+    /**
+     * Get all lemmas.
+     * @return 
+     */
+    public Map<String,String> getLemmas() { return lemmas; }
+    
+    /**
+     * Get all lemmas less stop words.
+     * @return 
+     */
+    public Map<String,String> getLemmasNoStops() { throw new UnsupportedOperationException(); }
     
     /**
      * Get spans for this sentence.

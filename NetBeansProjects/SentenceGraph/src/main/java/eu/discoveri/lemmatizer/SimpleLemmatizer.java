@@ -10,6 +10,9 @@ import eu.discoveri.utils.Utils;
 
 import eu.discoveri.exceptions.ListLengthsDifferException;
 import eu.discoveri.exceptions.ArrayLengthsDifferException;
+import eu.discoveri.exceptions.POSTagsListIsEmptyException;
+import eu.discoveri.exceptions.TokensListIsEmptyException;
+import eu.discoveri.graph.Populate;
 
 import java.io.File;
 import java.io.BufferedReader;
@@ -82,12 +85,14 @@ public class SimpleLemmatizer implements Lemmatizer
      * @param tags
      * @param match2NN Match Pell NNP/NNPS to NN on dictionary
      * @return Token-lemma map
+     * @throws eu.discoveri.exceptions.TokensListIsEmptyException
+     * @throws eu.discoveri.exceptions.POSTagsListIsEmptyException
      * @throws ArrayLengthsDifferException
      * @throws ListLengthsDifferException (Should never happen)
      */
     @Override
     public Map<String,String> lemmatize(String[] toks, String[] tags, boolean match2NN)
-            throws ArrayLengthsDifferException, ListLengthsDifferException
+            throws TokensListIsEmptyException, POSTagsListIsEmptyException, ArrayLengthsDifferException, ListLengthsDifferException
     {
         // Check array sizes match
         if( toks.length != tags.length )
@@ -106,13 +111,21 @@ public class SimpleLemmatizer implements Lemmatizer
      * @param toks Tokens of the sentence
      * @param tags POS tags of the tokens of the sentence
      * @param match2NN Match Pell NNP/NNPS to NN/NNS on dictionary
+     * @throws eu.discoveri.exceptions.TokensListIsEmptyException
+     * @throws eu.discoveri.exceptions.POSTagsListIsEmptyException
      * @throws ListLengthsDifferException
      * @return Token-lemma map
      */
     @Override
     public Map<String,String> lemmatize(List<String> toks, List<String> tags, boolean match2NN)
-            throws ListLengthsDifferException
+            throws TokensListIsEmptyException, POSTagsListIsEmptyException, ListLengthsDifferException
     {
+        // No tokens?
+        if( toks.isEmpty() )
+            throw new TokensListIsEmptyException("No tokens, SimpleLemmatizer:lemmatize()");
+        // No POS tags?
+        if( tags.isEmpty() )
+            throw new POSTagsListIsEmptyException("No POStags, SimpleLemmatizer:lemmatize()");
         // Check array sizes match
         if( toks.size() != tags.size() )
             throw new ListLengthsDifferException("toks: "+toks.size()+", tags: "+tags.size());
@@ -241,22 +254,29 @@ public class SimpleLemmatizer implements Lemmatizer
      * M A I N (test)
      * =======
      * @param args 
-     * @throws java.io.FileNotFoundException 
+     * @throws FileNotFoundException 
+     * @throws ListLengthsDifferException 
      */
+    static int ii = 0;
     public static void main(String[] args)
-            throws FileNotFoundException
+            throws FileNotFoundException, IOException, TokensListIsEmptyException, POSTagsListIsEmptyException, ListLengthsDifferException, ArrayLengthsDifferException
     {
-        // Get dictionary
-        SimpleLemmatizer sl = new SimpleLemmatizer(new FileInputStream(Constants.RESMODELS+Language.getLangModels().get(LangCode.en).get(Constants.LEMMATIZE)));
+        // Set up some NLP stuff
+        Populate popl = new Populate(LangCode.en);
         
         // Dump the dictionary
-        sl.dumpDictionary("NNP");
+        popl.getSl().dumpDictionary("NNP");
         
         // Dump the POStags
         //sl.posTagsOfDict();
 
         // Test lemmatizer
-        List<String> toks = Arrays.asList("Achinese","Science","is","science","scientists","doing","sciency","stuff","in","the","sciences","daily");
-        //List<String> tags = Arrays.asList("");
+        String[] toks = {"Achinese","Jupiter","Moon","January","Capricorn","Science","is","science","scientists","doing","sciency","stuff","to","the","sciences","daily"};
+        String[] tags = popl.getPme().tag(toks);
+        Map<String,String> lems = popl.getSl().lemmatize(toks,tags,true);
+        lems.forEach((k,v) -> {
+            System.out.println("Key: " +k+ "("+tags[ii]+"), Val: "+v);
+            ++ii;
+        });
     }
 }

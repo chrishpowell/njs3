@@ -90,6 +90,12 @@ public class Token <Void> implements Predicate<Void>
      * @return 
      */
     public String getStem() { return stem; }
+    
+    /**
+     * Get the lemma.
+     * @return 
+     */
+    public String getLemma() { return lemma; }
 
     /**
      * Get the probabilities.

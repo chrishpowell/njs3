@@ -7,6 +7,8 @@ package eu.discoveri.graph;
 
 import eu.discoveri.elements.Sentence;
 import eu.discoveri.exceptions.EmptySentenceListException;
+import eu.discoveri.exceptions.ListLengthsDifferException;
+import eu.discoveri.exceptions.POSTagsListIsEmptyException;
 import eu.discoveri.exceptions.SentenceIsEmptyException;
 import eu.discoveri.exceptions.TokensCountInSentencesIsZeroException;
 import eu.discoveri.exceptions.TokensListIsEmptyException;
@@ -73,6 +75,8 @@ public class GraphSentences
      * @throws SentenceIsEmptyException
      * @throws EmptySentenceListException
      * @throws TokensListIsEmptyException
+     * @throws ListLengthsDifferException
+     * @throws POSTagsListIsEmptyException
      */
     public static void startGraph()
             throws  TokensCountInSentencesIsZeroException,
@@ -81,9 +85,11 @@ public class GraphSentences
                     SentenceIsEmptyException,
                     EmptySentenceListException,
                     TokensCountInSentencesIsZeroException,
-                    TokensListIsEmptyException
+                    TokensListIsEmptyException,
+                    ListLengthsDifferException,
+                    POSTagsListIsEmptyException
     {
-        // Set up OpenNLP (TokenizerME, SentenceDetectorME, POSTaggerME, SimpleLemmatizer) 
+        // Set up OpenNLP (TokenizerME, SentenceDetectorME, POSTaggerME, [Simple]Lemmatizer) 
         Populate popl = new Populate( LangCode.en );
         
         // Get sentences from raw text
@@ -98,12 +104,17 @@ public class GraphSentences
         // Now determine POS tag (NN,NNS etc.) of each token
         gas.posTagSentenceCorpus(popl.getPme());
         
-        // Remove tokens that don't match reqd. POS tags
+        // Lemmatize sentence corpus using default Lemmatizer
+        // *** Nota Bene: Must be done AFTER tokenization and POS tagging.
+        gas.lemmatizeSentenceCorpus(popl, true);
+        
+        // Remove tokens that don't match reqd. POS tags.
+        // *** Nota Bene: Must be done BEFORE counting tokens or lemmas. 
         gas.filterPOStags();
         
         // Now calculate common word count between sentences and
-        // do the token counting per sentence pair (QRscore) [Updates each sentence]
-        gas.counting();
+        // do the token/lemma counting per sentence pair (QRscore) [Updates each sentence]
+        gas.countingLemmas();
         
         // Calculate the similarity score between sentences (QRscore) [Updates each sentence]
         gas.similarity();

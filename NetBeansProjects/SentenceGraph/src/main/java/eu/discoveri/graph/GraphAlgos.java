@@ -12,6 +12,9 @@ import eu.discoveri.exceptions.TokensListIsEmptyException;
 
 import eu.discoveri.elements.Sentence;
 import eu.discoveri.elements.Token;
+import eu.discoveri.exceptions.ListLengthsDifferException;
+import eu.discoveri.exceptions.POSTagsListIsEmptyException;
+import eu.discoveri.lemmatizer.Lemmatizer;
 import eu.discoveri.sentenceanalysis.CountQR;
 import eu.discoveri.sentenceanalysis.Nul;
 
@@ -104,6 +107,57 @@ public class GraphAlgos
     }
     
     /**
+     * Lemmatize sentence corpus.
+     * @param lemmer
+     * @param match2NN
+     * @return
+     * @throws EmptySentenceListException
+     * @throws SentenceIsEmptyException
+     * @throws TokensListIsEmptyException
+     * @throws ListLengthsDifferException
+     * @throws POSTagsListIsEmptyException 
+     */
+    public List<Sentence> lemmatizeSentenceCorpus(Lemmatizer lemmer, boolean match2NN)
+             throws EmptySentenceListException, SentenceIsEmptyException, TokensListIsEmptyException, ListLengthsDifferException, POSTagsListIsEmptyException
+    {
+        // Check we have sentences
+        if( sents.isEmpty() )
+            throw new EmptySentenceListException("Need sentences to process! GraphAlgos:lemmatizeSentenceCorpus");
+        
+        for( Sentence s: sents )
+            s.lemmatizeThisSentence(lemmer,match2NN);
+        
+        return sents;
+    }
+    
+    /**
+     * Lemmatize sentences using default lemmatizer in Populate.
+     * 
+     * @param popl
+     * @param match2NN
+     * @return
+     * @throws EmptySentenceListException
+     * @throws SentenceIsEmptyException
+     * @throws TokensListIsEmptyException
+     * @throws ListLengthsDifferException
+     * @throws POSTagsListIsEmptyException 
+     */
+    public List<Sentence> lemmatizeSentenceCorpus(Populate popl,boolean match2NN)
+            throws EmptySentenceListException, SentenceIsEmptyException, TokensListIsEmptyException, ListLengthsDifferException, POSTagsListIsEmptyException
+    {
+        // Check we have sentences
+        if( sents.isEmpty() )
+            throw new EmptySentenceListException("Need sentences to process! GraphAlgos:lemmatizeSentenceCorpus");
+        
+        for( Sentence s: sents )
+        {
+            popl.lemmasOfSentence(s,match2NN);
+        }
+        
+        return sents;
+    }
+    
+    /**
      * Remove tokens that do not match reqd. POS tags.
      * 
      * @return
@@ -129,12 +183,12 @@ public class GraphAlgos
      * @return 
      * @throws EmptySentenceListException 
      */
-    public List<Sentence> counting()
+    public List<Sentence> countingTokens()
             throws EmptySentenceListException
     {
         // Check we have sentences
         if( sents.isEmpty() )
-            throw new EmptySentenceListException("Need sentences to process! GraphAlgos:counting()");
+            throw new EmptySentenceListException("Need sentences to process! GraphAlgos:countingTokens()");
         
         /*
          * Sort sentences by tokens' count (long to short hence s2 - s1)
@@ -207,7 +261,7 @@ public class GraphAlgos
                 // For each token in sentenceQ (Note: Q token count >= R token count)
                 for( Token tQ: wordsQ )
                 {
-                    String wordQ = tQ.getToken();
+                    String wordQ = tQ.getToken();       // *MATCH* this token
 
                     if( wCountQR.containsKey(wordQ) )   // Is this token common between Q&R?
                     { // Yes
@@ -223,7 +277,8 @@ public class GraphAlgos
                     // Match Q token against each token in target sentenceR
                     for( Token tR: wordsR )
                     {
-                        String wordR = tR.getToken();
+                        String wordR = tR.getToken();   // *MATCH* this token
+                        
                         if( wordR.equals(wordQ) )                                   // Words match between sentences?
                         { //Yes
                             // First match for token in both Q&R?
@@ -252,12 +307,172 @@ public class GraphAlgos
          * Number sentences in which token appears (from commonWords map)
          */
         commonWords.forEach((k,v) -> {
-            String pSrc = k.getKey().getName();
-            String pTgt = k.getValue().getName();
+            String pSrc = k.getKey().getName();             // tuple 1: src
+            String pTgt = k.getValue().getName();           // tuple 2: tgt
             
             // For common words build key:subkey (Sentence:Word)
-            v.forEach((s,c) -> {
+            v.forEach((s,c) -> {                            // Map words-count
                 // Word/token appeared before?
+                if( !tokSentCount.containsKey(s) )
+                {// No
+                    Map<String,Nul> nulMap = new HashMap<>();
+                    nulMap.put(pSrc,nul);
+                    nulMap.put(pTgt, nul);
+                    tokSentCount.put(s, nulMap);
+                }
+                else
+                {// Yes
+                    if( !tokSentCount.get(s).containsKey(pSrc) )
+                    {
+                        tokSentCount.get(s).put(pSrc, nul);
+                    }
+                    if( !tokSentCount.get(s).containsKey(pTgt) )
+                    {
+                        tokSentCount.get(s).put(pTgt, nul);
+                    }
+                }
+            });
+        });
+        
+        return sents;
+    }
+    
+    /**
+     * Same word/lemma counting per sentence pair.
+     * 
+     * @return 
+     * @throws EmptySentenceListException 
+     */
+    public List<Sentence> countingLemmas()
+            throws EmptySentenceListException
+    {
+        // Check we have sentences
+        if( sents.isEmpty() )
+            throw new EmptySentenceListException("Need sentences to process! GraphAlgos:countingLemmas()");
+        
+        /*
+         * Sort sentences by tokens' count (long to short hence s2 - s1)
+         * Allows sentence matching to work efficiently/properly
+         */
+        List<Sentence> nodeList = sents.stream()
+                        .sorted((s1,s2) -> s2.getTokens().size()-s1.getTokens().size())
+                        .collect(Collectors.toList());
+
+        /*
+         * Count common words per sentence pair (Q,R).
+         * [Num sentence pairs = (sents.size*sents.size-1)/2.]
+         */
+        // ---> For each sentence (Q) 'Source' sentence
+        for( Sentence nodeQ: nodeList )
+        {
+            // Count of common words in each sentence of pair
+            CountQR cqr; 
+            
+            // 'Name of source Sentence(Node) Q
+            String nameQ = nodeQ.getName();
+            
+            // Get words/tokens of sentenceQ (of NodeQ)
+            List<Token> wordsQ = nodeQ.getTokens();
+
+            // ---> For each sentence (R) 'Target' sentence
+            for( Sentence nodeR: nodeList )
+            {
+                // Name of target Sentence(Node) R
+                String nameR = nodeR.getName();
+
+                /*
+                 * Do not process sentences if...
+                 */
+                // ...same sentence
+                if( nameR.equals(nameQ) ) continue;
+                
+                // ...pair already processed. That is, processing B:A but A:B done already
+                if( !noDups.containsKey(nameQ) )
+                {
+                    if( !noDups.containsKey(nameR) )
+                    {
+                        // Start this sentence pair Q:R
+                        Map<String,Nul> nulMap = new HashMap<>();
+                        nulMap.put(nameR,nul); 
+                        noDups.put(nameQ,nulMap);
+                    }
+                    else
+                        // Key already exists, in future process as else below
+                        continue;
+                }
+                else
+                    if( !noDups.get(nameQ).containsKey(nameR) )
+                    {
+                        noDups.get(nameQ).put(nameR, nul);
+                    }
+
+                /*
+                 * Ok, got two candidate sentences.  Do matching token counting.
+                 */
+                // Get words/tokens of sentenceR (of NodeR)
+                List<Token> wordsR = nodeR.getTokens();
+
+                /*
+                 * Now compare tokens of sentences Q:R
+                 */
+                // Map of count of common words between two sentences <Word,count of Word per sentence pair>
+                Map<String,CountQR> wCountQR = new HashMap<>();
+                
+                // For each lemma in sentenceQ (Note: Q lemma count >= R lemma count)
+                for( Token tQ: wordsQ )
+                {
+                    String wordQ = tQ.getLemma();       // *MATCH* this lemma
+
+                    if( wCountQR.containsKey(wordQ) )   // Is this lemma common between Q&R?
+                    { // Yes
+                        cqr = wCountQR.get(wordQ);      // Get current count for this token
+                        int count = cqr.getQ();         // Count in Q
+                        cqr.setQ(++count);              // Increment
+                        wCountQR.replace(wordQ, cqr);   // Update
+                        
+                        // Already counted all of R (where token key is created below), so skip R
+                        continue;
+                    }
+
+                    // Match Q token against each lemma in target sentenceR
+                    for( Token tR: wordsR )
+                    {
+                        String wordR = tR.getLemma();   // *MATCH* this lemma
+                        
+                        if( wordR.equals(wordQ) )                                   // Words match between sentences?
+                        { //Yes
+                            // First match for token in both Q&R?
+                            if( !wCountQR.containsKey(wordQ) )                      // Create Map entry
+                            {//Yes
+                                wCountQR.put(wordQ, new CountQR(nameQ,1,nameR,1));  // Init count of both sentences
+                            }
+                            else
+                            {//No
+                                // Ok, get the counts for this token
+                                cqr = wCountQR.get(wordR);
+                                int count = cqr.getR();         // Count for R sentence
+                                cqr.setR(++count);              // Increment R count
+                                wCountQR.replace(wordR, cqr);   // Update
+                            }
+                        }
+                    }
+                }
+                
+            // Ok, store the common words for the sentence pairs
+            commonWords.put(new AbstractMap.SimpleEntry(nodeQ,nodeR), wCountQR);
+            }
+        }
+
+        /*
+         * Number sentences in which lemma appears (from commonWords map)
+         */
+        commonWords.forEach((k,v) -> {
+            String pSrc = k.getKey().getName();             // tuple 1: src
+            String pTgt = k.getValue().getName();           // tuple 2: tgt
+            
+            // For common words build key:subkey (Sentence:Word)
+            v.forEach((s,c) -> {                            // Map words-count
+                // Word/lemma appeared before?
                 if( !tokSentCount.containsKey(s) )
                 {// No
                     Map<String,Nul> nulMap = new HashMap<>();
