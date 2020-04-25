@@ -3,7 +3,6 @@
  * Unauthorized copying of this file, via any medium is strictly prohibited.
  * Proprietary and confidential.
  */
-
 package eu.discoveri.codesnippets.graphs;
 
 import java.util.ArrayList;
@@ -15,91 +14,95 @@ import java.util.Set;
 
 import org.neo4j.driver.Query;
 import static org.neo4j.driver.Values.parameters;
+import org.neo4j.ogm.annotation.NodeEntity;
+import org.neo4j.ogm.annotation.Properties;
+import org.neo4j.ogm.annotation.Relationship;
 
-/**
- *
- * @author Chris Powell, Discoveri OU
- * @email info@astrology.ninja
- */
 
 /**
  * Neo4j node for a sentence.
  * @author Chris Powell, Discoveri OU
+ * @email info@discoveri.eu
  */
-class SentenceNode
+@NodeEntity
+public class SentenceNode extends AbstractVertex
 {
-    private final String                sid;
-    private final String                name;
-    private final String                sentence;
-    private double                      score;
-    private final List<String>          tokens;
-    private boolean                     visited = false;
-    private boolean                     queued = false;
+    // Basic attrs
+    private String                sentence = null;
+    private double                score = 0.d;
+    private List<String>          tokens = null;
+    
+    // Subgraph label
+    private String                subgraph = null;
     
     // Distance
-    private double                      dist = Double.MAX_VALUE;
+    private double                dist = Double.MAX_VALUE;
     // Between
-    private double                      between = 0.d, cbetween = 0.d;
+    private double                between = 0.d, cbetween = 0.d;
     // Shortest paths (will be changed by edge weight)
-    private double                      spath = 0.d;
-    // First time
-    private boolean                     pathFound = false;
-    
-    private SentenceNode                prev;
+    private double                spath = 0.d;
+    // 'Prev.' node along path
+    @Relationship(type="PREV")
+    private SentenceNode          prev = null;
 
-    // Betweeness
-    private double                      bc = 0.d;
     // Predecessors
-    private List<SentenceNode>          preds = new ArrayList<>();
-    // Adjacencies
-    private List<SentenceNode>          adjs = new ArrayList<>();
+    private List<SentenceNode>    preds = new ArrayList<>();
 
     // Neo4j params
-    private Map<String,Object>          params = new HashMap<>();
+    @Properties
+    private Map<String,Object>    params = new HashMap<>();
+
 
     /**
      * Constructor.
      * 
+     * @param namespace
      * @param name
      * @param sentence
+     * @param tokens
      * @param score 
      */
-    public SentenceNode(String sid, String sentence, List<String> tokens, double score)
+    public SentenceNode(String namespace, String name, String sentence, List<String> tokens, double score)
     {
-        this.sid = sid;
-        this.name = sid;
+        super(name,namespace);
         this.sentence = sentence;
         this.score = score;
         this.tokens = tokens;
 
         // Build map for graph (tokens need to be processed separately)
-        params.put("sid",this.sid);
-        params.put("name", this.name);
-        params.put("sentence",this.sentence);
-        params.put("score",this.score);
+        params.put("name", name);
+        params.put("sentence",sentence);
+        params.put("score",score);
+    }
+    
+    /**
+     * Constructor.
+     * @param name
+     * @param sentence
+     * @param tokens
+     * @param score 
+     */
+    public SentenceNode(String name, String sentence, List<String> tokens, double score)
+    {
+        this("eu.discoveri.predikt",name,sentence,tokens,score);
+    }
+    
+    /**
+     * No arg constructor for loading from db.
+     */
+    private SentenceNode()
+    {
+        this("eu.discoveri.predikt","",null,0.0d);
     }
 
-    
-    public String getSID() { return sid; }
-    public String getName() { return name; }
+
     public String getSentence() { return sentence; }
 
     public double getScore() { return score; }
     public void setScore(double score) { this.score = score; }
 
-    public boolean isVisited() { return visited; }
-    public void setVisited(boolean visited) { this.visited = visited; }
-    public void setVisited() { this.visited = true; }
-
-    public boolean isQueued() { return queued; }
-    public void setQueued(boolean queued) { this.queued = queued; }
-    public void setQueued() { this.queued = true; }
-
     public List<SentenceNode> getPreds() { return preds; }
     public void setPreds(List<SentenceNode> preds) { this.preds = preds; }
-    
-    public List<SentenceNode> getAdjs() { return adjs; }
-    public void setAdjs(List<SentenceNode> adjs) { this.adjs = adjs; }
     
     public double getDist() { return dist; }
     public void setDist(double dist) { this.dist = dist; }
@@ -114,18 +117,14 @@ class SentenceNode
     public void setSpath(double spath) { this.spath = spath; }
     public void incrSPath(double vpath) { this.spath += vpath; }
 
-    public boolean isPathFound() { return pathFound; }
-    public void setPathFound(boolean pathFound) { this.pathFound = pathFound; }
-
     public SentenceNode getPrev() { return prev; }
     public void setPrev(SentenceNode prev) { this.prev = prev; }
-    
-
-    // ...Not sure about this:
-//    public List<SNBetween> getSnb() { return snb; }
-//    public void setSnb(List<SNBetween> snb) { this.snb = snb; }
 
     public List<String> getTokens() { return tokens; }
+    
+    public String getSubgraph() { return subgraph; }
+    public void setSubgraph(String subgraph) { this.subgraph = subgraph; }
+
     
     /**
      * Create a new sentence node, ready for persisting.
@@ -139,28 +138,25 @@ class SentenceNode
         Map<String,Object> ps = new HashMap<>();
         
         // Add first query
-        String s = "CREATE ("+this.sid+":Sentence) SET "+this.sid+"={sid:$sid,name:$name,sentence:$sentence,score:$score}";
+        String s = "CREATE ("+getName()+":Sentence) SET "+getName()+"={sid:$sid,name:$name,sentence:$sentence,score:$score}";
         lhs.add( new Query(s,params) );
-//        System.out.println("S..> " +s);
 
         // Create tokens of the sentence
         StringBuilder q0 = new StringBuilder();
         int idx = 0;
         for( String t: tokens )
         {
-            q0.append("CREATE (t").append(idx).append(this.sid)
+            q0.append("CREATE (t").append(idx).append(getName())
                     .append(":Token {text:$text").append(idx)
                     .append(",tid:$tid").append(idx).append("}) ");
 
             ps.put("text"+idx,t);
-            ps.put("tid"+idx,"t"+idx+this.sid);
+            ps.put("tid"+idx,"t"+idx+getName());
             // Incr idx
             ++idx;
         }
         // Create the query
         lhs.add( new Query(q0.toString(),ps) );
-//        System.out.println("0..> " +q0.toString());
-//        ps.forEach((k,v) -> System.out.println("ps..> " +k+ ":" +v));
         
         // Build edges
         idx = 0;
@@ -169,10 +165,9 @@ class SentenceNode
             StringBuilder q1 = new StringBuilder();
             q1.append(" MATCH (src:Sentence {sid:$sid}) MATCH (tgt:Token {tid:$tid})")
                     .append(" MERGE (src)-[:TOK]-(tgt)");
-//            System.out.println("1..> " +q1.toString());
             
             // Create the query
-            lhs.add( new Query(q1.toString(),parameters("sid",this.sid,"tid","t"+idx+this.sid)) );
+            lhs.add( new Query(q1.toString(),parameters("sid",getName(),"tid","t"+idx+getName())) );
             // Incr idx
             ++idx;
         }
@@ -180,22 +175,74 @@ class SentenceNode
 
         return lhs;
     }
+
     
     /**
-     * Create a weighted edge between sentences.
-     * @param otherNode
-     * @param weight
+     * Save on session
+     * @param ss
      * @return 
      */
-    public Query addWeightedEdge( SentenceNode otherNode, double weight )
+    public SentenceNode persist( SentenceNodeService ss )
     {
-        return new Query( "MATCH (src:Sentence {name:$srcName}) MATCH (tgt:Sentence {name:$tgtName}) MERGE (src)-[:SIMILARTO {weight:$weight}]-(tgt)",
-                          parameters("srcName",sid,"tgtName",otherNode.getSID(),"weight",weight)  );
+        return ss.createOrUpdate(this);
     }
     
+    /**
+     * Delete on session
+     * @param ss 
+     */
+    public void delete( SentenceNodeService ss )
+    {
+        ss.delete(getNid());
+    }
+    
+    /**
+     * Find a SentenceNode via nid
+     * @param nid
+     * @param ss
+     * @return 
+     */
+    public SentenceNode find( SentenceNodeService ss, Long nid )
+    {
+        return ss.find(nid);
+    }
+
+    /**
+     * Hash.
+     * @return 
+     */
+    @Override
+    public int hashCode()
+    {
+        int hash = 7;
+        hash = 67 * hash + getUUID().hashCode();
+        return hash;
+    }
+
+    /**
+     * Equals.
+     * @param obj
+     * @return 
+     */
+    @Override
+    public boolean equals(Object obj)
+    {
+        final SentenceNode other = (SentenceNode) obj;
+        
+        if(this == other) { return true; }
+        if(other == null) { return false; }
+        if( getClass() != other.getClass() ) { return false; }
+        
+        return this.getNameNamespace().equals(other.getNameNamespace());
+    }
+    
+    /**
+     * Simple output
+     * @return 
+     */
     @Override
     public String toString()
     {
-        return name+" ("+tokens.size()+")";
+        return getName()+" ("+tokens.size()+")";
     }
 }

@@ -1,0 +1,884 @@
+/*
+ * Copyright (C) Discoveri SIA - All Rights Reserved
+ * Unauthorized copying of this file, via any medium is strictly prohibited.
+ * Proprietary and confidential.
+ */
+package eu.discoveri.codesnippets.graphs;
+
+import java.time.Duration;
+import java.util.AbstractMap;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import static java.util.Map.entry;
+import java.util.Set;
+
+import org.neo4j.driver.AccessMode;
+import org.neo4j.driver.AuthTokens;
+import org.neo4j.driver.Config;
+import org.neo4j.driver.Driver;
+import org.neo4j.driver.GraphDatabase;
+import org.neo4j.driver.Query;
+import org.neo4j.driver.Result;
+import org.neo4j.driver.Session;
+import org.neo4j.driver.SessionConfig;
+import org.neo4j.driver.TransactionConfig;
+import org.neo4j.driver.net.ServerAddress;
+import static org.neo4j.driver.Values.parameters;
+
+
+/**
+ *
+ * @author Chris Powell, Discoveri OU
+ * @email info@astrology.ninja
+ */
+public class GraphTest1
+{
+    // Test data
+    private final List<String> lts = List.of("quick", "brown", "fox", "jump", "lazy", "dog");
+    private final List<String> lts2 = List.of("every", "good", "boy", "deserve", "fruit", "vegetable", "console", "time");
+    private final Map<String,SentenceNode> snMap = Map.ofEntries(
+            entry("S1",new SentenceNode("S1","1 The quick brown fox jumps over the lazy dog",lts,0.9876)),
+            entry("S2",new SentenceNode("S2","2 The quick brown fox jumps over the lazy dog",lts2,0.01)),
+            entry("S3",new SentenceNode("S3","3 The quick brown fox jumps over the lazy dog",lts,0.25)),
+            entry("S4",new SentenceNode("S4","4 The quick brown fox jumps over the lazy dog",lts,3.15) ),
+            entry("S5",new SentenceNode("S5","5 The quick brown fox jumps over the lazy dog",lts,1.99)),
+            entry("S6",new SentenceNode("S6","6 The quick brown fox jumps over the lazy dog",lts,2.1))
+        );
+    private final Map<AbstractMap.SimpleEntry<SentenceNode,SentenceNode>,Double> simScores = Map.ofEntries(
+            entry(new AbstractMap.SimpleEntry<>(snMap.get("S1"),snMap.get("S2")),3.14159d),
+            entry(new AbstractMap.SimpleEntry<>(snMap.get("S1"),snMap.get("S3")),0.9d),
+            entry(new AbstractMap.SimpleEntry<>(snMap.get("S1"),snMap.get("S4")),0.09d),
+            entry(new AbstractMap.SimpleEntry<>(snMap.get("S2"),snMap.get("S3")),1.25d),
+            entry(new AbstractMap.SimpleEntry<>(snMap.get("S3"),snMap.get("S4")),1.37d),
+            entry(new AbstractMap.SimpleEntry<>(snMap.get("S3"),snMap.get("S5")),2.222d),
+            entry(new AbstractMap.SimpleEntry<>(snMap.get("S5"),snMap.get("S6")),0.5d)
+    );
+    
+    // Db driver
+    private Driver driver = null;
+    // Session config
+    SessionConfig sessionCfg = SessionConfig.builder().withDefaultAccessMode(AccessMode.WRITE).build();
+    // Tx config
+    TransactionConfig txCfg = TransactionConfig.builder().withTimeout(Duration.ofSeconds(5)).build();
+    
+    
+    /**
+     * Build the driver.
+     * @param vUri
+     * @param user
+     * @param pwd
+     * @param addresses
+     * @return 
+     */
+    private Driver createDriver( String vUri, String user, String pwd, ServerAddress... addresses )
+    {
+        // Build a config
+        Config cfg = Config.builder()
+                        .withResolver(address -> new HashSet<>(Arrays.asList(addresses))) 
+                        .build();
+        
+        // Neo4j driver
+        return GraphDatabase.driver( vUri, AuthTokens.basic(user,pwd), cfg);
+    }
+    
+    /**
+     * Get corpus (sentences).
+     * @return 
+     */
+    private Map<String,SentenceNode> getCorpus()
+    {
+        return snMap;
+    }
+    
+    private Map<AbstractMap.SimpleEntry<SentenceNode,SentenceNode>,Double> getSimScores()
+    {
+        return simScores;
+    }
+    
+    /**
+     * Create a node with directed edge using SET
+     * @return 
+     */
+    private Result createNodeWithDEdge()
+    {
+        try( Session sess = driver.session(sessionCfg) )
+        {
+            Query q = new Query("CREATE (x:Summat)->[:HAS]-(y:Nasty) SET x={name:$xname,desc:$xdesc} SET y={name:$yname,desc:$ydesc}",
+                                    parameters("xname","fred","xdesc","xdesc","yname","bill","ydesc","ydesc"));
+            return sess.run( q, txCfg );
+        }
+    }
+    
+    /**
+     * Create a node with undirected edge using SET
+     * @return 
+     */
+    private Result createNodeWithUEdge()
+    {
+        try( Session sess = driver.session(sessionCfg) )
+        {
+            // Both methods create a directed edge!
+//            Query q = new Query("CREATE (x:Summat)-[:HAS]->(y:Nasty) SET x={name:$xname,desc:$xdesc} SET y={name:$yname,desc:$ydesc} SET w={weight:$weight}",
+//                                    parameters("xname","fred","xdesc","xdesc","yname","bill","ydesc","ydesc","weight",3.14159));
+            Query q = new Query("CREATE (x:Summat) CREATE (y:Nasty) MERGE (x)-[w:HAS]-(y) SET x={name:$xname,desc:$xdesc} SET y={name:$yname,desc:$ydesc} SET w={weight:$weight}",
+                                parameters("xname","fred","xdesc","xdesc","yname","bill","ydesc","ydesc","weight",3.14159));
+            
+            return sess.run( q, txCfg );
+        }
+    }
+    
+    /**
+     * Persist a sentence.
+     * @param sn A sentence(node) a wrapper for a sentence.
+     * @returns the result
+     */
+    private void persistSentence( SentenceNode sn )
+    {
+        try( Session sess = driver.session(sessionCfg) )
+        {
+            Set<Query> qs = sn.buildSentenceQuerySet();
+            qs.forEach(q -> sess.run(q,txCfg));
+        }
+    }
+    
+    /**
+     * Persist an undirected weighted edge between two sentences.
+     * @param source
+     * @param target
+     * @param weight
+     * @return 
+     */
+    private Result persistUWEdge( SentenceNode source, SentenceNode target, double weight )
+    {
+        try( Session sess = driver.session(sessionCfg) )
+        {
+            return sess.run( source.addWeightedEdge(target,weight) );
+        }
+    }
+    
+    private Result emptyDb()
+    {
+        try( Session sess = driver.session(sessionCfg) )
+        {
+            return sess.run( new Query("MATCH (n) DETACH DELETE n") );
+        }
+    }
+    
+    /**
+     * Close connections
+     */
+    private void close()
+    {
+        driver.close();
+    }
+
+
+    /**
+     * M A I N
+     * =======
+     * @param args 
+     */
+    public static void main(String[] args)
+    {
+        final String NEO4J = "neo4j://localhost";
+        final String USER = "neo4j", PWD = "karabiner";
+        
+        // Setup db
+        GraphTest1 g = new GraphTest1();
+        // Create the driver
+        g.driver = g.createDriver(NEO4J, USER, PWD, ServerAddress.of("localhost", 7687));
+        
+        // Clear db
+        g.emptyDb();
+        
+        // Get sentences/scores
+        Map<String,SentenceNode> sNode = g.getCorpus();
+        Map<AbstractMap.SimpleEntry<SentenceNode,SentenceNode>,Double> snScores = g.getSimScores();
+        
+        // Clear all nodes/edges of db
+        // ??
+        
+        // Populate db
+        sNode.forEach((k,v) -> g.persistSentence(v));                           // Nodes
+        snScores.forEach((k,v) -> {                                             // Edges
+            g.persistUWEdge(k.getKey(),k.getValue(), v);
+        });
+
+        // Test Create with undirectededge
+//        g.createNodeWithUEdge();
+        
+        // Close db
+        g.close();
+    }
+}
+
+/*
+ * Copyright (C) Discoveri SIA - All Rights Reserved
+ * Unauthorized copying of this file, via any medium is strictly prohibited.
+ * Proprietary and confidential.
+ */
+package eu.discoveri.codesnippets.graphs;
+
+import java.time.Duration;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import org.neo4j.driver.AccessMode;
+import org.neo4j.driver.AuthTokens;
+import org.neo4j.driver.Config;
+import org.neo4j.driver.Driver;
+import org.neo4j.driver.GraphDatabase;
+import org.neo4j.driver.Query;
+import org.neo4j.driver.Result;
+import org.neo4j.driver.Session;
+import org.neo4j.driver.SessionConfig;
+import org.neo4j.driver.TransactionConfig;
+import static org.neo4j.driver.Values.parameters;
+import org.neo4j.driver.net.ServerAddress;
+
+
+/**
+ *
+ * @author Chris Powell, Discoveri OU
+ * @email info@astrology.ninja
+ */
+public class GraphTest3
+{
+    // Db driver
+    private Driver driver = null;
+    // Session config
+    SessionConfig sessionCfg = SessionConfig.builder().withDefaultAccessMode(AccessMode.WRITE).build();
+    // Tx config
+    TransactionConfig txCfg = TransactionConfig.builder().withTimeout(Duration.ofSeconds(5)).build();
+
+    private Driver createDriver( String vUri, String user, String pwd, ServerAddress... addresses )
+    {
+        // Build a config
+        Config cfg = Config.builder()
+                        .withResolver(address -> new HashSet<>(Arrays.asList(addresses))) 
+                        .build();
+        
+        // Neo4j driver
+        return GraphDatabase.driver( vUri, AuthTokens.basic(user,pwd), cfg);
+    }
+
+    private Result emptyDb()
+    {
+        try( Session sess = driver.session(sessionCfg) )
+        {
+            return sess.run( new Query("MATCH (n) DETACH DELETE n") );
+        }
+    }
+
+    private void close()
+    {
+        driver.close();
+    }
+        
+        
+        
+    public static void main(String[] args)
+    {
+        final String NEO4J = "neo4j://localhost";
+        final String USER = "neo4j", PWD = "karabiner";
+        
+        // Setup db
+        GraphTest3 g = new GraphTest3();
+        // Create the driver
+        g.driver = g.createDriver(NEO4J, USER, PWD, ServerAddress.of("localhost", 7687));
+        
+        // Clear db
+        g.emptyDb();
+        
+        List<Query> lsq = List.of(  new Query("CREATE (S0:Sentence) SET S0={name:$name,sentence:$sentence}",
+                                                parameters("name","S0","sentence","The quick brown fox jumps")),
+                                    new Query("CREATE (S1:Sentence) SET S1={name:$name,sentence:$sentence}",
+                                                parameters("name","S1","sentence","The quick brown fox jumps")),
+                                    new Query("CREATE (t0S0:Token) SET t0S0={text:$text,tid:$tid}",
+                                                parameters("text","quick","tid","t0S0")),
+                                    new Query("CREATE (t1S0:Token) SET t1S0={text:$text,tid:$tid}",
+                                                parameters("text","brown","tid","t1S0")),
+                                    new Query("CREATE (t2S0:Token) SET t2S0={text:$text,tid:$tid}",
+                                                parameters("text","fox","tid","t2S0")),
+                                    new Query("CREATE (t0S1:Token) SET t0S1={text:$text,tid:$tid}",
+                                                parameters("text","quick","tid","t0S1")),
+                                    new Query("CREATE (t1S1:Token) SET t1S1={text:$text,tid:$tid}",
+                                                parameters("text","brown","tid","t1S1")),
+                                    new Query("CREATE (t2S1:Token) SET t2S1={text:$text,tid:$tid}",
+                                                parameters("text","fox","tid","t2S1")),
+                                    new Query("MATCH(src:Sentence {name:$name0}) MATCH(tgt:Sentence {name:$name1}) MERGE (src)-[:SIMILARTO]-(tgt)",
+                                                parameters("name0","S0","name1","S1"))  );
+        List<Query> ltq = List.of(  new Query("MATCH(src:Sentence {name:$name}) MATCH(tgt:Token {tid:$tid}) MERGE (src)-[:TOK]-(tgt)",parameters("name","S0","tid","t0S0")),
+                                    new Query("MATCH(src:Sentence {name:$name}) MATCH(tgt:Token {tid:$tid}) MERGE (src)-[:TOK]-(tgt)",parameters("name","S0","tid","t1S0")),
+                                    new Query("MATCH(src:Sentence {name:$name}) MATCH(tgt:Token {tid:$tid}) MERGE (src)-[:TOK]-(tgt)",parameters("name","S0","tid","t2S0")),
+                                    new Query("MATCH(src:Sentence {name:$name}) MATCH(tgt:Token {tid:$tid}) MERGE (src)-[:TOK]-(tgt)",parameters("name","S1","tid","t0S1")),
+                                    new Query("MATCH(src:Sentence {name:$name}) MATCH(tgt:Token {tid:$tid}) MERGE (src)-[:TOK]-(tgt)",parameters("name","S1","tid","t1S1")),
+                                    new Query("MATCH(src:Sentence {name:$name}) MATCH(tgt:Token {tid:$tid}) MERGE (src)-[:TOK]-(tgt)",parameters("name","S1","tid","t2S1"))  );
+        
+        try( Session sess = g.driver.session(g.sessionCfg) )
+        {
+            lsq.forEach(q -> sess.run(q,g.txCfg));
+            ltq.forEach(q -> sess.run(q,g.txCfg));
+        }
+        
+        g.close();
+    }
+}
+
+
+    
+    // Sentences and relations
+    Map<String,SentenceNode> sNodes;
+    Map<AbstractMap.SimpleEntry<SentenceNode,SentenceNode>,SentenceEdge> sEdges;
+        
+    /**
+     * Dump all nodes adjacencies.
+     * @param adjs 
+     */
+    public void dumpAllAdjs(Map<SentenceNode,Adjacencies> adjs)
+    {
+        adjs.forEach((st,ends) -> {
+            System.out.print("Node> " +st.getName()+ ":");
+            ends.getAdjacencies().forEach(adj -> {
+                System.out.print(" End node: " +adj.getENode()+ " weight: " +adj.getWeight()+", ");
+            });
+            System.out.println("");
+        });
+    }
+    
+    /**
+     * Get all nodes and their adjacencies.
+     * @param sess 
+     * @return  
+     */
+    public Map<SentenceNode,List<RelationshipModel>> setAllAdjacenciesRel(Session sess)
+    {
+        Map<SentenceNode,List<RelationshipModel>> adjs = new HashMap<>();
+        
+        String q1 = "MATCH (start:SentenceNode)-[r:SIMILARTO]->(end) RETURN start,collect(end) as adj,collect(r) as rel";
+        Result result = sess.query(q1,Collections.emptyMap());
+        result.queryResults().forEach( entry -> {
+            adjs.put((SentenceNode)entry.get("start"), (List<RelationshipModel>)entry.get("rel"));
+        });
+        
+        return adjs;
+    }
+    
+    /**
+     * Set of subgraphs of the graph.  Daft way of doing this...
+     * @param sNodes
+     * @param sEdges
+     * @return 
+     */
+//    public Map<String,List<SentenceNode>> collectSubGraphs( Map<String,SentenceNode> sNodes,
+//                                                            Map<AbstractMap.SimpleEntry<SentenceNode,SentenceNode>,SentenceEdge> sEdges )
+//    {
+//        Map<String,List<SentenceNode>> subGraphs = new HashMap<>();
+//        String subgraph = UUID.randomUUID().toString().replaceAll("-", "");
+//        
+//        // Check all nodes (NB: not all may have edges)
+//        sNodes.forEach((name,sn) -> {
+//            sEdges.forEach((sn1sn2,edge) -> {
+//                // Source and target vertices of edge
+//                SentenceNode snsrc = sn1sn2.getKey(), sntgt = sn1sn2.getValue();
+//                
+//                // Process against opposite vertex on edge 
+//                if( sntgt.equals(sn) )                                          // Matching 'target' end of edge?
+//                    { sn.getAdjs().add(snsrc); }
+//                else
+//                    if( snsrc.equals(sn) )                                      // Matching 'source' end of edge
+//                        { sn.getAdjs().add(sntgt); }
+//                
+//            });
+//        });
+//        
+//        return subGraphs;
+//    }
+
+    /**
+     * Predecessors.
+     * @param sNodes 
+     */
+    private void dumpPreds(Map<String,SentenceNode> sNodes)
+    {
+        sNodes.forEach((str,sn) -> {
+            sn.getPreds().forEach(p -> System.out.print(str+", Pred: "+p+" Prev: "));
+            System.out.println("" +(sn.getPrev()!=null?sn.getPrev():"<NULL>"));
+        });
+    }
+
+    /**
+     * Betweenness.
+     * This can only be run on 'virgin' nodes.
+     * @TODO: Difficult to add/merge new nodes?
+     */
+//    private void betweennessMaps( Map<String,SentenceNode> sNodes,
+//                                  Map<AbstractMap.SimpleEntry<SentenceNode,SentenceNode>,SentenceEdge> sEdges )
+//    {
+//        // Limitless queue
+//        Queue<SentenceNode> q = new LinkedBlockingQueue();
+//        // Stack
+//        Deque<SentenceNode> stk = new LinkedBlockingDeque();
+//
+//
+//        // Get a start sentence node 
+//        SentenceNode start = sNodes.get(sNodes.keySet().stream().findFirst().get());
+//
+//        q.add(start);                                                           // Push on queue
+//        start.setDist(0.d);                                                     // delta-s
+//        start.setSpath(1.d);                                                    // sigma-s (lowercase)
+//        
+//        // Check all nodes (NB: not all may have edges)
+//        sNodes.forEach((name,sn) -> {
+//          
+//            // Pop queue
+//            SentenceNode snv = q.poll();
+//            stk.push(snv);                                                      // Push on to stack
+//            
+//            sEdges.forEach((sn1sn2,edge) -> {
+//                // Source and target vertices of edge
+//                SentenceNode snsrc = sn1sn2.getKey(), sntgt = sn1sn2.getValue();
+//                
+//                // Process against opposite vertex on edge 
+//                if( sntgt.equals(snv) )                                         // Matching 'target' end of edge?
+//                {
+//                    // Not yet processed?
+//                    if( snsrc.getDist() == Double.MAX_VALUE )
+//                    {
+//                        snsrc.setPrev(snv);                                     // snv is 'previous' vertex (on edge)
+//                        snsrc.setDist(snv.getDist() + edge.getWeight());        // Shortest weighted hop on from snv
+//                        q.add(snsrc);                                           // Push on to queue
+//                    }
+//                    // Still on shortest path?
+//                    if( snsrc.getDist() == snv.getDist() + edge.getWeight() )   // Shortest path
+//                    {
+//                        snsrc.setSpath(snsrc.getSpath()+snv.getSpath());
+//                        snsrc.getPreds().add(sntgt);                            // Add 'other' end
+//                    }
+//                    
+//                    // Add an adjacency
+//                    snv.getAdjs().add(snsrc);
+//                }
+//                else
+//                    if( snsrc.equals(snv) )                                     // Matching 'source' end of edge
+//                    {
+//                        // Processed?
+//                        if( sntgt.getDist() == Double.MAX_VALUE )
+//                        {
+//                            sntgt.setPrev(snv);
+//                            sntgt.setDist(snv.getDist() + edge.getWeight());
+//                            q.add(sntgt);
+//                        }
+//                        // Still on shortest path?
+//                        if( sntgt.getDist() == snv.getDist() + edge.getWeight() )   // Shortest path
+//                        {
+//                            sntgt.setSpath(sntgt.getSpath()+snv.getSpath());
+//                            sntgt.getPreds().add(snsrc);                            // Add 'other' end
+//                        }
+//                        
+//                        // Add an adjacency
+//                        snv.getAdjs().add(sntgt);
+//                    }
+//            });
+            
+            // Lone node?
+//            if( !snv.hasEdge() )
+//            {
+//                snv.setDist(Double.MAX_VALUE);                          // delta-s
+//                snv.setSpath(0.d);                                      // sigma-s (lowercase)
+//                
+//                // No edges move to next node
+//                //??
+//            }
+            
+            // Accumulation
+//            while( !stk.isEmpty() )
+//            {
+//                SentenceNode snw = stk.pop();
+//                System.out.println("Accum.--> " +snw);
+//                snw.getPreds().forEach(p -> System.out.println("  Preds: " +p.getName())); //+ ", Prev: " +p.getPrev().getName()
+//
+//                // Be careful with disconnected graph
+//                if( snw.getPreds().size() > 0 )
+//                {
+//                    snw.getPreds().forEach(v -> v.setBetween(v.getBetween()+(v.getSpath()/snw.getSpath())*(1.d+snw.getBetween())));
+//                    if( snw != sn )
+//                        snw.setCbetween(snw.getCbetween()+snw.getBetween());
+//                }
+//                else
+//                {
+//                    snw.setCbetween(0.d);
+//                }
+//            }
+//        });
+//    }
+    
+    /**
+     * Betweenness.
+     * This can only be run on 'virgin' nodes.
+     * @TODO: Difficult to add/merge new nodes?
+     * 
+     * Brandes algorithm
+     * -----------------
+     * for all s in V:
+     *      // Dists to inf., Sigma to zero
+     *      init Preds, Dists, Sigmas (predecessors, dist to source, shortest paths)
+     * 
+     *      // Dist is dist v to s.  Hence set Dist(s) = 0
+     *      push s onto Queue
+     *      while Queue not empty:  // No need to check this as queue pop will fail with null
+     *          pop Queue into v; push v onto Stack
+     *          for all remote vertices of edges of v (being w):
+     *              if Dist(v) = inf.:  // First time for this node
+     *                  dist(w) = dist(v) + weight (of this edge)
+     *                  push w onto Stack
+     *              else
+     *              if Dist(w) = Dist(v) + weight (of this edge)
+     *                  Sigma(w) += Sigma(v)
+     *                  append v onto Pred(v)
+     * 
+     *      // "Accumulation"
+     *      while Stsck not empty:
+     *          pop Stack into w
+     *          for all Pred(w)
+     *              calc dependencies // See Brandes algorithm
+     *              calc Cb(w)        // Central Betweenness
+     */
+    private void betweennessOLD( Map<SentenceNode,Adjacencies> adjNodes )
+    {
+        // Limitless queue
+        Queue<SentenceNode> q = new LinkedBlockingQueue();
+        // Stack
+        Deque<SentenceNode> stk = new LinkedBlockingDeque();
+
+        // For each disconnected subgraph...
+        // ...TBD...
+
+        
+        // Check all nodes (NB: not all may have edges)
+        adjNodes.forEach((snsrc,adjs) -> {
+            // Init
+            adjNodes.forEach((w,a) -> {
+                w.getPreds().clear();
+                w.setDist(Double.MAX_VALUE);
+                w.setSpath(0.d);
+            });
+            // Init this
+            snsrc.setDist(0.d);                                                 // delta-s
+            snsrc.setSpath(1.d);                                                // sigma-s (lowercase sigma)
+            
+            // Push on to Q
+            q.add(snsrc);
+            
+            while( !q.isEmpty() )
+            {          
+                // Pop queue
+                System.out.println("  Head of queue: " +q.peek());
+                SentenceNode snv = q.poll();                                    // Aroohagh, aroohagh!!  Returns null if nothing there.
+
+                stk.push(snv);                                                  // Push on to stack, exception if null
+
+                adjs.getAdjacencies().forEach(adj -> {                          // For each adjacency of snsrc (wasn't in SentenceNode)
+                    SentenceNode sntgt = (SentenceNode)adj.getENode();          // Remote vertex
+                    System.out.println("   Edge start: " +snsrc+ ", end: " +sntgt);
+                    System.out.println("   Tgt dist: " +sntgt.getDist());
+                    // Process against opposite vertex on edge 
+                    if( sntgt.getDist() == Double.MAX_VALUE )                       // Not yet processed?
+                    {
+                        sntgt.setPrev(snv);                                         // snv is 'previous' vertex (on edge)
+                        sntgt.setDist(snv.getDist() + adj.getWeight());             // Shortest weighted hop on from snv
+                        q.add(sntgt);                                               // Push on to queue
+                    }
+                    // Still on shortest path?
+                    if( sntgt.getDist() == snv.getDist() + adj.getWeight() )        // Shortest path
+                    {
+                        sntgt.setSpath(sntgt.getSpath()+snv.getSpath());
+                        sntgt.getPreds().add(snv);                                  // Add 'other' end
+                    }
+                });
+            }
+            
+            // Lone node?
+//            if( !snv.hasEdge() )
+//            {
+//                snv.setDist(Double.MAX_VALUE);                          // delta-s
+//                snv.setSpath(0.d);                                      // sigma-s (lowercase)
+//                
+//                // No edges move to next node
+//                //??
+//            }
+            
+            // Accumulation
+            while( !stk.isEmpty() )
+            {
+                SentenceNode snw = stk.pop();
+                System.out.println(" > Accum.--> " +snw);
+                snw.getPreds().forEach(p -> System.out.println("  Preds: " +p.getName()));
+
+                // NB: Be careful with disconnected graph!!
+                // Got any Preds for target node?
+                if( snw.getPreds().size() > 0 && snw != snsrc )
+                {
+                    snw.getPreds().forEach(v -> v.setBetween(v.getBetween()+(v.getSpath()/snw.getSpath())*(1.d+snw.getBetween())));
+                    snw.setCbetween(snw.getCbetween()+snw.getBetween());
+                }
+                else
+                {
+                    snw.setCbetween(0.d);
+                }
+            }
+        });
+    }    
+
+
+    /**
+     * Calc. tuned central betweenness
+     * @return 
+     */
+//    private Map<String,CDs> calcCBwOLD( Map<SentenceNode,Adjacencies> adjNodes )
+//    {
+//        Map<String,CDs> CDwtuned = new TreeMap<>();
+//        final double ALPHATUNING = 1.3d;                   // Must be positive
+//        
+//        adjNodes.forEach((sn,adjs) -> {
+//            double weight = 0.d, w = 0.d;
+//            
+//            for( Adjacency adj: adjs.getAdjacencies() )
+//                { weight += adj.getWeight(); }
+//            
+//            int size = adjs.getAdjacencies().size();
+//            CDwtuned.put( sn.getName(),
+//                          new CDs(size, weight, Math.pow(size,1.d-ALPHATUNING)*Math.pow(weight,ALPHATUNING))  );
+//        });
+//        
+//        return CDwtuned;
+//    }
+
+    /**
+     * Calc. tuned central betweenness
+     * @return 
+     */
+//    private Map<String,CDs> calcCBwMap( Map<String,SentenceNode> sNodes,
+//                                     Map<AbstractMap.SimpleEntry<SentenceNode,SentenceNode>,SentenceEdge> sEdges )
+//    {
+//        Map<String,CDs> CDwtuned = new TreeMap<>();
+//        final double ALPHATUNING = 1.3d;                   // Must be positive
+//        
+//        sNodes.forEach((key,val) -> {
+//            double weight = 0.d, w = 0.d;
+//            
+//            for( SentenceNode sn: val.getAdjs() )
+//            {
+//                AbstractMap.SimpleEntry k1 = new AbstractMap.SimpleEntry<>(val,sn);
+//                if( sEdges.containsKey(k1) )
+//                    w = sEdges.get(k1).getWeight();
+//                else
+//                {
+//                    AbstractMap.SimpleEntry k2 = new AbstractMap.SimpleEntry<>(sn,val);
+//                    w = sEdges.get(k2).getWeight();
+//                }
+//                
+//                weight += w;
+//            }
+//            
+//            int size = val.getAdjs().size();
+//            CDwtuned.put( key,
+//                          new CDs(size, weight, Math.pow(size,1.d-ALPHATUNING)*Math.pow(weight,ALPHATUNING))  );
+//        });
+//        
+//        return CDwtuned;
+//    }
+
+//        /**
+//     * Tuned central betweenness and stats.
+//     * 
+//     * @param cbwTuned
+//     * @param adjNodes
+//     * @return 
+//     */
+//    public DescriptiveStatistics cbWeightOut( Map<String,CDs> cbwTuned,
+//                                              Map<SentenceNode,Adjacencies> adjNodes )
+//    {
+//        // Sum of tuned betweennesses
+//        double sum = 0.d;
+//        
+//        // Sum weighted/tuned
+//        sum = calcCBw(adjNodes).entrySet().stream().map((entry) -> {
+//            CDs cds = entry.getValue();
+//            System.out.println("> " +entry.getKey()+ " ("+cds.getCd()+") :("+cds.getCDw()+") ("+cds.getCDwtuned()+") ");
+//            return cds;
+//        }).map((cds) -> cds.getCDwtuned()).reduce(sum, (accumulator, _item) -> accumulator + _item);
+//        System.out.println("");
+//        
+//        DescriptiveStatistics stats = new DescriptiveStatistics();
+//        cbwTuned.forEach((key,cds) -> {
+//            stats.addValue(cds.getCDwtuned());
+//        });
+//        
+//        return stats;
+//    }
+    
+    /**
+     * Tuned central betweenness and stats.
+     * 
+     * @param cbwTuned
+     * @param sNodes
+     * @param sEdges
+     * @return 
+     */
+//    public DescriptiveStatistics cbWeightOutMap( Map<String,CDs> cbwTuned,
+//                                              Map<String,SentenceNode> sNodes,
+//                                              Map<AbstractMap.SimpleEntry<SentenceNode,SentenceNode>,SentenceEdge> sEdges)
+//    {
+//        // Sum of tuned betweennesses
+//        double sum = 0.d;
+//        
+//        // Sum weighted/tuned
+//        sum = calcCBwMap(sNodes,sEdges).entrySet().stream().map((entry) -> {
+//            CDs cds = entry.getValue();
+//            System.out.println("> " +entry.getKey()+ " ("+cds.getCd()+") :("+cds.getCDw()+") ("+cds.getCDwtuned()+") ");
+//            return cds;
+//        }).map((cds) -> cds.getCDwtuned()).reduce(sum, (accumulator, _item) -> accumulator + _item);
+//        System.out.println("");
+//        
+//        DescriptiveStatistics stats = new DescriptiveStatistics();
+//        cbwTuned.forEach((key,cds) -> {
+//            stats.addValue(cds.getCDwtuned());
+//        });
+//        
+//        return stats;
+//    }        
+
+/**
+     * Dump central betweenness numbers
+     */
+//    private void dumpCBOLD(Map<String,SentenceNode> sNodes)
+//    {
+//        sNodes.forEach((name,sn) -> {
+//            System.out.println(sn.getName()+":"+sn.getPrev()+"- dist to start: "+sn.getDist()+", SPath: "+sn.getSpath()+", Betw: "+sn.getBetween()+", CB: "+sn.getCbetween());
+//        });
+//    }
+    
+    /**
+     * Adjacency list
+     */
+//    private void dumpAdjList(Map<String,SentenceNode> sNodes)
+//    {
+//        sNodes.forEach((key,val) -> {
+//            System.out.print(key+" ("+val.getAdjs().size()+") ");
+//            val.getAdjs().forEach(al -> System.out.print(al.getName()+" "));
+//            System.out.println("");
+//        });
+//    }
+
+//        // Adjacencies
+//        Map<SentenceNode,Adjacencies> adjs = gt2.getAllAdjs(sess);
+//        gt2.dumpAllAdjs(adjs);
+//        
+//        // Betweenness
+//        System.out.println("B2--------------");
+//        gt2.betweenness(adjs);
+//        System.out.println("----------------");
+//        
+//                System.out.println("--------[Adjs-2]--------------");
+//        gt2.dumpAdjList(gt2.sNodes);
+//        
+//        
+//        // Save the calcs
+////        System.out.println("Persist nodes...");
+//        gt2.sNodes.forEach((k,v) -> {
+////            System.out.println("  Persisting: " +v.getName()+ ", Prev: " +v.getPrev());
+//            v.persist(sns);
+//        });
+//        
+//        // Dump the betweenness stuff
+//        gt2.dumpCB(gt2.sNodes);
+//
+//        // Central betweenness
+//        final double ALPHATUNING = 1.3d;                                        // Tuning betweenness, must be positive
+//
+//        // Calc. CB
+//        Map<String,CDs> cbwTuned = gt2.calcCBw(adjs);
+//        System.out.println("\r\nCentral Betweenness (weighted):");
+//        System.out.println("Node (CD):(CDw) (CDw tuned ["+ALPHATUNING+"])");
+//        
+//        // Stats for filtering
+//        DescriptiveStatistics stats = gt2.cbWeightOut( cbwTuned, adjs );
+//
+//        System.out.println("Stats, 20th percentile: " +stats.getPercentile(20.d));        
+//        cbwTuned.forEach((key,cds) -> {
+//            if( cds.getCDwtuned() > stats.getPercentile(20.d) )
+//                System.out.println("Kept: " +key);
+//        });
+        
+        // Betweenness
+//        gt2.betweenness( gt2.sNodes, gt2.sEdges );
+////        System.out.println("--------[Preds]-------------");
+////        gt2.dumpPreds(gt2.sNodes);
+//
+//        System.out.println("--------[Adjs-2]--------------");
+//        gt2.dumpAdjList(gt2.sNodes);
+//        
+//        
+//        // Save the calcs
+////        System.out.println("Persist nodes...");
+//        gt2.sNodes.forEach((k,v) -> {
+////            System.out.println("  Persisting: " +v.getName()+ ", Prev: " +v.getPrev());
+//            v.persist(sns);
+//        });
+//        
+//        // Dump the betweenness stuff
+//        gt2.dumpCB(gt2.sNodes);
+//
+//        // Central betweenness
+//        final double ALPHATUNING = 1.3d;                                        // Tuning betweenness, must be positive
+//
+//        // Calc. CB
+//        Map<String,CDs> cbwTuned = gt2.calcCBw(gt2.sNodes,gt2.sEdges);
+//        System.out.println("\r\nCentral Betweenness (weighted):");
+//        System.out.println("Node (CD):(CDw) (CDw tuned ["+ALPHATUNING+"])");
+//        
+//        // Stats for filtering
+//        DescriptiveStatistics stats = gt2.cbWeightOut( cbwTuned, gt2.sNodes, gt2.sEdges );
+//
+//        System.out.println("Stats, 20th percentile: " +stats.getPercentile(20.d));        
+//        cbwTuned.forEach((key,cds) -> {
+//            if( cds.getCDwtuned() > stats.getPercentile(20.d) )
+//                System.out.println("Kept: " +key);
+//        });
+//        
+//        // Close
+//        discSess.close();
+//        
+//        /*
+//         * Ok, new session and load maps from db
+//         */
+//        DiscoveriSessionFactory discSess0 = DiscoveriSessionFactory.getInstance();
+//        Session sess0 = discSess0.getSession();
+//        // Db service
+//        SentenceNodeService sns0 = new SentenceNodeService();
+//        SentenceEdgeService ses0 = new SentenceEdgeService();
+//        
+//        // Load all sentences
+//        Iterable<SentenceNode> nodes = sns0.findAll();
+//        Iterable<SentenceEdge> edges = ses0.findAll();
+//        
+//        // Clear mappings, .clear() is unsupported
+//        gt2.sNodes = new HashMap<>();
+//        gt2.sEdges = new HashMap<>();
+//        
+//        // Populate maps
+//        nodes.forEach(sn -> {
+//            gt2.sNodes.put(sn.getName(), sn);
+//        });
+//        edges.forEach(se -> {
+//            gt2.sEdges.put(new AbstractMap.SimpleEntry(se.getS1(),se.getS2()), se);
+//        });
+//        
+//        // Dump as above
+//        gt2.dumpCB(gt2.sNodes);
