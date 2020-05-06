@@ -36,12 +36,13 @@ public class GraphUtils
         Corpi.getVertices().forEach((k,v) -> {
             v.persist(sns);
         });                                                                     // SentenceNodes
-        Corpi.getEdges().forEach((k,v) -> v.persist(ses));                                // SentenceEdges
+        Corpi.getEdges().forEach((k,v) -> v.persist(ses));                      // SentenceEdges
     }
 
     /**
      * Get all nodes and their adjacencies from db.
      * @param sess 
+     * @return  
      */
     public static List<Vertex> setAllAdjacencies(Session sess)
     {   

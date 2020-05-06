@@ -31,6 +31,8 @@ public class SentenceNode extends AbstractVertex
     private String                sentence = null;
     private double                score = 0.d;
     private List<String>          tokens = null;
+    // Maps don't work in neo4j!!
+    //private Map<String,TToken>    mapToks = new HashMap<>();
     
     // Subgraph label
     private String                subgraph = null;
@@ -70,9 +72,12 @@ public class SentenceNode extends AbstractVertex
         this.tokens = tokens;
 
         // Build map for graph (tokens need to be processed separately)
-        params.put("name", name);
-        params.put("sentence",sentence);
-        params.put("score",score);
+        params = Map.of("name", name, "sentence",sentence, "score",score);
+        
+        // Maps do NOT work with Neo4j!!!!
+//        tokens.forEach(t -> {
+//            mapToks.put(t, new TToken(t,name));
+//        });
     }
     
     /**
@@ -244,5 +249,17 @@ public class SentenceNode extends AbstractVertex
     public String toString()
     {
         return getName()+" ("+tokens.size()+")";
+    }
+}
+
+class TToken
+{
+    private String  s1;
+    private String  s2;
+    
+    public TToken(String s1,String s2)
+    {
+        this.s1 = s1;
+        this.s2 = s2;
     }
 }

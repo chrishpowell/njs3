@@ -21,16 +21,16 @@ public class AbstractEdge extends GraphEntity implements Edge
     @EndNode
     private Vertex    n2 = null;
     
-    public AbstractEdge( String name, String namespace, Vertex n1, Vertex n2 )
+    public AbstractEdge( String namespace, String name, Vertex n1, Vertex n2 )
     {
-        super(name,namespace);
+        super(namespace,name);
         this.n1 = n1;
         this.n2 = n2;
     }
     
     public AbstractEdge()
     {
-        this("","eu.discoveri.predikt",null,null);
+        this("eu.discoveri.predikt","",null,null);
     }
     
     /**

@@ -257,6 +257,7 @@ public class GraphTest2
          * ------------------------------
          */
         sess.purgeDatabase();                                                   // Clear database
+        // With Maps, you get "java.lang.IllegalArgumentException: No serializer found for class..." below
         GraphUtils.populateDbFromMaps( sns, ses );                              // Populate from Corpi
         
         // Set all adjacencies

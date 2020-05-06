@@ -67,12 +67,14 @@ public abstract class AbstractVertex extends GraphEntity implements Vertex
      * Get the component name.
      * @return 
      */
+    @Override
     public String getComponent() { return component; }
 
     /**
      * Set the component name.
      * @param component 
      */
+    @Override
     public void setComponent(String component) { this.component = component; }
     
     /**

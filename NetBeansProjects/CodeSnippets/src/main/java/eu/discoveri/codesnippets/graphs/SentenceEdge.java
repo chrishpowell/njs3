@@ -36,9 +36,9 @@ public class SentenceEdge extends AbstractEdge
      * @param s1 
      * @param s2 
      */
-    public SentenceEdge( String name, String namespace, double weight, SentenceNode s1, SentenceNode s2 )
+    public SentenceEdge( String namespace, String name, double weight, SentenceNode s1, SentenceNode s2 )
     {
-        super(name,namespace, s1, s2);
+        super(namespace,name, s1, s2);
         this.weight = weight;
     }
     
@@ -50,9 +50,9 @@ public class SentenceEdge extends AbstractEdge
      * @param s1 
      * @param s2 
      */
-    public SentenceEdge( String name, String namespace, SentenceNode s1, SentenceNode s2 )
+    public SentenceEdge( String namespace, String name, SentenceNode s1, SentenceNode s2 )
     {
-        this(name,namespace,1.0d,s1,s2);
+        this(namespace,name, 1.0d,s1,s2);
     }
     
     /**
@@ -63,7 +63,7 @@ public class SentenceEdge extends AbstractEdge
      */
     public SentenceEdge( SentenceNode s1, SentenceNode s2 )
     {
-        this(s1.getName()+s2.getName(),"eu.discoveri.predikt",s1,s2);
+        this("eu.discoveri.predikt",s1.getName()+s2.getName(), s1,s2);
     }
     
     /**
@@ -75,7 +75,7 @@ public class SentenceEdge extends AbstractEdge
      */
     public SentenceEdge( SentenceNode s1, SentenceNode s2, double weight )
     {
-        this(s1.getName()+s2.getName(),"eu.discoveri.predikt",weight,s1,s2);
+        this("eu.discoveri.predikt",s1.getName()+s2.getName(), weight,s1,s2);
     }
     
     /**
