@@ -14,4 +14,5 @@ package es.discoveri.lemmas.config;
 public class Constants
 {
     public static int           WORD = 1, LANGID = 2, POSID = 3, LEMMID = 4, PAGEID = 5;
+    public static String        INPATH = "/home/chrispowell/NetBeansProjects/Lemmas/src/main/java/es/discoveri/lemmas/txt/";
 }

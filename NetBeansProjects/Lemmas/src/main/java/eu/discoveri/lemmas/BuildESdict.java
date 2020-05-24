@@ -64,8 +64,6 @@ public class BuildESdict
 class ESReaderParseThread extends Thread
 {
     private final Connection    conn;
-    private final String        INPATH = "/home/chrispowell/NetBeansProjects/Lemmas/src/main/java/es/discoveri/lemmas/txt/";
-    private final String        OUTFILE = "/home/chrispowell/NetBeansProjects/Lemmas/src/main/java/eu/discoveri/lemmas/dict/es-lemmatizer.dict";
     
     /**
      * Constructor.  Setup db connection.
@@ -88,7 +86,14 @@ class ESReaderParseThread extends Thread
         PreparedStatement lem = null;
         
         // List of lemma type files
-        List<DictType> files = Arrays.asList(   new DictType("verbDic.txt",PennPOSCode.VB,LangCode.es)  );
+        //new DictType("es-verbDic.txt",PennPOSCode.VB,LangCode.es)
+        List<DictType> files = Arrays.asList(   new DictType("es-adjDic.txt",PennPOSCode.JJ,LangCode.es),
+                                                new DictType("es-advDic.txt",PennPOSCode.RB,LangCode.es),
+                                                new DictType("es-conjDic.txt",PennPOSCode.CC,LangCode.es),
+                                                new DictType("es-detDic.txt",PennPOSCode.DT,LangCode.es),
+                                                new DictType("es-nounDic.txt",PennPOSCode.NN,LangCode.es),
+                                                new DictType("es-particlesDic.txt",PennPOSCode.RP,LangCode.es),
+                                                new DictType("es-pronounDic.txt",PennPOSCode.WP,LangCode.es)      );
         
         // Statements for populating word/lemma tables
         try
@@ -108,7 +113,7 @@ class ESReaderParseThread extends Thread
         // Ok, now for each input lemma type file
         for( DictType d: files )
         {
-            File in = new File(INPATH+d.getfName());
+            File in = new File(Constants.INPATH+d.getfName());
 
             // Read input file
             String line;
