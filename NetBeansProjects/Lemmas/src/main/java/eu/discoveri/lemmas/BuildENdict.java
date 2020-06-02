@@ -6,23 +6,17 @@
 package eu.discoveri.lemmas;
 
 import es.discoveri.lemmas.config.Constants;
-import eu.discoveri.lemmas.db.DictType;
-import eu.discoveri.lemmas.db.LemmaDbBuild;
+import eu.discoveri.predikt.graph.SentenceNode;
 import java.io.BufferedReader;
-//import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileReader;
-//import java.io.FileWriter;
 import java.io.IOException;
 import java.text.ParseException;
-import java.util.Arrays;
-import java.util.List;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-//import java.sql.SQLException;
 
 
 /**
@@ -45,14 +39,25 @@ public class BuildENdict
     public void lineReaderParseParallel(final int numberOfFiles, final int degreeOfParallelism, Connection conn)
             throws IOException, ParseException, InterruptedException
     {
+        Thread[] pool = new Thread[degreeOfParallelism];
+        int batchSize = numberOfFiles / degreeOfParallelism;
+
+        for (int b=0; b<degreeOfParallelism; b++)
+        {
+            pool[b] = new ENReaderParseThread(conn);
+            pool[b].start();
+        }
+
+        for (int b=0; b<degreeOfParallelism; b++)
+            { pool[b].join(); }
     }
 }
+
 
 //--------------------------[ Run Thread ]--------------------------------------
 class ENReaderParseThread extends Thread
 {
     private final Connection    conn;
-    private final String        INPATH = "/home/chrispowell/NetBeansProjects/Lemmas/src/main/java/es/discoveri/lemmas/txt/";
     
     /**
      * Constructor.  Setup db connection.
@@ -73,25 +78,19 @@ class ENReaderParseThread extends Thread
         // Preparared statements
         PreparedStatement wrd = null;
         PreparedStatement lem = null;
-        
-        // List of lemma type files
-        List<DictType> files = Arrays.asList(   new DictType("en-verbDic.txt",PennPOSCode.VB,LangCode.en),
-                                                new DictType("en-adjDic.txt",PennPOSCode.JJ,LangCode.en),
-                                                new DictType("en-advDic.txt",PennPOSCode.RB,LangCode.en),
-                                                new DictType("en-conjDic.txt",PennPOSCode.CC,LangCode.en),
-                                                new DictType("en-detDic.txt",PennPOSCode.DT,LangCode.en),
-                                                new DictType("en-nounDic.txt",PennPOSCode.NN,LangCode.en),
-                                                new DictType("en-particlesDic.txt",PennPOSCode.RP,LangCode.en),
-                                                new DictType("en-pronounDic.txt",PennPOSCode.WP,LangCode.en)      );
+        PreparedStatement lid = null;
         
         // Statements for populating word/lemma tables
         try
         {
             // To populate word table
-            wrd = conn.prepareStatement("insert into lemma.Word values(default,?,?,?,?,?) on duplicate key update word=word");
+            wrd = conn.prepareStatement(Constants.WORDPS);
                         
             // To populate lemma table
-            lem = conn.prepareStatement("insert into lemma.Lemma values(default,?) on duplicate key update lemma=lemma");
+            lem = conn.prepareStatement(Constants.LEMMAPS);
+            
+            // To get a lemma when updating Word table
+            lid = conn.prepareStatement(Constants.LEMMA4WORDPS);
         }
         catch( Exception ex )
         {
@@ -100,55 +99,67 @@ class ENReaderParseThread extends Thread
         }
         
         // Ok, now for each input lemma type file
-        for( DictType d: files )
+        File in = new File(Constants.INPATH+"en-lemmatizer.dict");
+        System.out.println("  ..> " +in.getName());
+
+        // Read input file
+        String line = "";
+        try( FileReader frd = new FileReader(in) )
         {
-            File in = new File(Constants.INPATH+d.getfName());
-
-            // Read input file
-            String line;
-            try( FileReader frd = new FileReader(in) )
+            BufferedReader brd = new BufferedReader(frd);
+            while( (line=brd.readLine()) !=null )
             {
-                BufferedReader brd = new BufferedReader(frd);
-                while( (line=brd.readLine()) !=null )
+                // Format: <word> \t <POS> \t <lemma>
+                String[] lemmaPlusWord = line.split("\t");
+
+                //... Lemma table
+                int lemmid = 0;
+                String lemma = lemmaPlusWord[2].replace("'", "\\'");            // Escape single quote
+
+                // Get the lemma id, else write lemma and then get id
+                lid.setString(1, lemma);
+                ResultSet rs = lid.executeQuery();
+                
+                if( rs.next() )
+                    lemmid = rs.getInt("id");
+                else
                 {
-                    // Format: <lemma>===List of <word>
-                    String[] lemmaPlusList = line.split("===");
-
-                    String lemma = lemmaPlusList[0];
-                    String[] words = lemmaPlusList[1].split(";");
-
-                    // Lemma table
+                    // Write
                     lem.setString(1, lemma);
                     lem.executeUpdate();
-                    PreparedStatement lid = conn.prepareStatement("select id from lemma.Lemma where lemma = '"+lemma+"'");
-                    ResultSet rs = lid.executeQuery();
+                    // And get the id (string set above)
+                    rs = lid.executeQuery();
                     rs.next();
-                    int lemmid = rs.getInt("id");
-
-                    // Word table
-                    for( String w: words )
-                    {
-                        // Store on Word table
-                        wrd.setString(Constants.WORD, w);
-                        wrd.setString(Constants.LANGID, d.getLangCode().toString());
-                        wrd.setString(Constants.POSID, d.getPOSCode().toString());
-                        wrd.setInt(Constants.LEMMID, lemmid);
-                        wrd.setInt(Constants.PAGEID, 1);
-                        wrd.executeUpdate();
-                    }
+                    lemmid = rs.getInt("id");
                 }
-                brd.close();
+
+                //... Word table
+                // Word
+                String w = lemmaPlusWord[0].replace("'", "\\'");                // Escape single quote
+                // POS tag
+                String POS = SentenceNode.POSsimple(lemmaPlusWord[1]);
+
+                // Store on Word table
+                wrd.setString(Constants.WORD, w);
+                wrd.setString(Constants.POSID, POS);
+                wrd.setString(Constants.LANGID, LangCode.en.toString());
+                wrd.setInt(Constants.LEMMID, lemmid);
+                wrd.setInt(Constants.PAGEID, 1);
+                wrd.executeUpdate();
             }
-            catch( SQLException sqx )
-            {
-                sqx.printStackTrace();
-                System.exit(-8);
-            }
-            catch( IOException iox )
-            {
-                iox.printStackTrace();
-                System.exit(-2);
-            }
+            brd.close();
+        }
+        catch( SQLException sqx )
+        {
+            System.out.println("!!!ERR(sqx) line: [" +line+ "]");
+            sqx.printStackTrace();
+            System.exit(-8);
+        }
+        catch( IOException iox )
+        {
+            System.out.println("!!!ERR(iox) line: [" +line+ "]");
+            iox.printStackTrace();
+            System.exit(-2);
         }
     }
 }

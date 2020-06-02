@@ -6,58 +6,63 @@
 //<editor-fold defaultstate="collapsed" desc="Database SQL">
 /*=== SQL to init database
 
+DROP TABLE IF EXISTS PennPOSCode;
 create table PennPOSCode
 (
-code CHAR(4) NOT NULL,
-descr VARCHAR(48) NOT NULL,
-PRIMARY KEY (code)
+	code CHAR(4) NOT NULL,
+	descr VARCHAR(48) NOT NULL,
+	PRIMARY KEY (code)
 ) ENGINE = INNODB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 
+DROP TABLE IF EXISTS LangCode;
 create table LangCode
 (
-code CHAR(2) NOT NULL,
-descr VARCHAR(16) NOT NULL,
-PRIMARY KEY (code)
+	code CHAR(2) NOT NULL,
+	descr VARCHAR(16) NOT NULL,
+	PRIMARY KEY (code)
 ) ENGINE = INNODB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 
+DROP TABLE IF EXISTS Lemma;
 create table Lemma
 (
-id INT unsigned NOT NULL AUTO_INCREMENT,
-lemma VARCHAR(32) NOT NULL,
-PRIMARY KEY (id)
+	id INT unsigned NOT NULL AUTO_INCREMENT,
+	lemma VARCHAR(48) NOT NULL,
+	PRIMARY KEY (id),
+	UNIQUE KEY(lemma)
 ) ENGINE = INNODB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 
 DROP TABLE IF EXISTS Word;
 create table Word
 (
-id INT unsigned NOT NULL AUTO_INCREMENT,
-word VARCHAR(48) NOT NULL,
-langId CHAR(2) NOT NULL,
-POSId CHAR(4) NOT NULL,
-lemmaId INT unsigned NOT NULL,
-pageId INT unsigned,
-UNIQUE KEY (id),
-PRIMARY KEY (word),
-UNIQUE KEY wordPOS (word,POSId),
-FOREIGN KEY (POSId) REFERENCES PennPOSCode(code),
-FOREIGN KEY (langId) REFERENCES LangCode(code),
-FOREIGN KEY (lemmaId) REFERENCES Lemma(id),
-FOREIGN KEY (pageId) REFERENCES Page(pageId)
+	id INT unsigned NOT NULL AUTO_INCREMENT,
+	word VARCHAR(64) NOT NULL,
+	POSId CHAR(4) NOT NULL,
+	langId CHAR(2) NOT NULL,
+	lemmaId INT unsigned NOT NULL,
+	pageId INT unsigned,
+	UNIQUE KEY (id),
+	PRIMARY KEY wordPOS (word,POSId),
+	FOREIGN KEY (POSId) REFERENCES PennPOSCode(code),
+	FOREIGN KEY (langId) REFERENCES LangCode(code),
+	FOREIGN KEY (lemmaId) REFERENCES Lemma(id),
+	FOREIGN KEY (pageId) REFERENCES Page(pageId)
 ) ENGINE = INNODB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 
+DROP TABLE IF EXISTS Page;
 create table Page
 (
-pageId INT unsigned NOT NULL AUTO_INCREMENT,
-pageNamespace INT(11) NOT NULL,
-pageTitle VARCHAR(255) COLLATE utf8_bin NOT NULL,
-PRIMARY KEY (pageId),
-UNIQUE KEY nameTitle (pageNamespace,pageTitle)
+ 	pageId INT unsigned NOT NULL AUTO_INCREMENT,
+ 	pageNamespace INT(11) NOT NULL,
+ 	pageTitle VARCHAR(255) COLLATE utf8_bin NOT NULL,
+ 	PRIMARY KEY (pageId),
+ 	UNIQUE KEY nameTitle (pageNamespace,pageTitle)
 ) ENGINE=InnoDB  DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 
 */
 //</editor-fold>
 package eu.discoveri.lemmas.db;
 
+import es.discoveri.lemmas.config.Constants;
 import eu.discoveri.lemmas.LangCode;
 import eu.discoveri.lemmas.PennPOSCode;
 
@@ -105,7 +110,7 @@ public class LemmaDbBuild
         empty.executeUpdate();
         
         // Populate the table
-        PreparedStatement ps = lemmaDb().prepareStatement("insert into lemma.LangCode values(?,?)");
+        PreparedStatement ps = lemmaDb().prepareStatement(Constants.LANGCODEPS);
         for( LangCode lc: LangCode.values() )
         {
             ps.setString(1, lc.toString());
@@ -131,7 +136,7 @@ public class LemmaDbBuild
         empty.executeUpdate();
         
         // Populate the table
-        PreparedStatement ps = lemmaDb().prepareStatement("insert into lemma.PennPOSCode values(?,?)");
+        PreparedStatement ps = lemmaDb().prepareStatement(Constants.PENNPOSCODEPS);
 
         for( PennPOSCode pc: PennPOSCode.values() )
         {
@@ -158,7 +163,7 @@ public class LemmaDbBuild
         empty.executeUpdate();
         
         // Populate the table
-        PreparedStatement ps = lemmaDb().prepareStatement("insert into lemma.Lemma values(default,?)");
+        PreparedStatement ps = lemmaDb().prepareStatement(Constants.LEMMANULLPS);
         
         // Adjective
         ps.setString(1, "NULL");
@@ -182,7 +187,7 @@ public class LemmaDbBuild
         empty.executeUpdate();
         
         // Populate the table
-        PreparedStatement ps = lemmaDb().prepareStatement("insert into lemma.Page values(default,?,?)");
+        PreparedStatement ps = lemmaDb().prepareStatement(Constants.PAGEZEROPS);
         
         // Adjective
         ps.setInt(1, 0);

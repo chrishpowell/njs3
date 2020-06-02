@@ -84,10 +84,11 @@ class ESReaderParseThread extends Thread
         // Preparared statements
         PreparedStatement wrd = null;
         PreparedStatement lem = null;
+        PreparedStatement lid = null;
         
         // List of lemma type files
-        //new DictType("es-verbDic.txt",PennPOSCode.VB,LangCode.es)
-        List<DictType> files = Arrays.asList(   new DictType("es-adjDic.txt",PennPOSCode.JJ,LangCode.es),
+        List<DictType> files = Arrays.asList(   new DictType("es-verbDic.txt",PennPOSCode.VB,LangCode.es),
+                                                new DictType("es-adjDic.txt",PennPOSCode.JJ,LangCode.es),
                                                 new DictType("es-advDic.txt",PennPOSCode.RB,LangCode.es),
                                                 new DictType("es-conjDic.txt",PennPOSCode.CC,LangCode.es),
                                                 new DictType("es-detDic.txt",PennPOSCode.DT,LangCode.es),
@@ -99,10 +100,13 @@ class ESReaderParseThread extends Thread
         try
         {
             // To populate word table
-            wrd = conn.prepareStatement("insert into lemma.Word values(default,?,?,?,?,?) on duplicate key update word=word");
+            wrd = conn.prepareStatement(Constants.WORDPS);
                         
             // To populate lemma table
-            lem = conn.prepareStatement("insert into lemma.Lemma values(default,?) on duplicate key update lemma=lemma");
+            lem = conn.prepareStatement(Constants.LEMMAPS);
+            
+            // To get a lemma when updating Word table
+            lid = conn.prepareStatement(Constants.LEMMA4WORDPS);
         }
         catch( Exception ex )
         {
@@ -114,9 +118,10 @@ class ESReaderParseThread extends Thread
         for( DictType d: files )
         {
             File in = new File(Constants.INPATH+d.getfName());
+            System.out.println("  ..> " +in.getName());
 
             // Read input file
-            String line;
+            String line = "";
             try( FileReader frd = new FileReader(in) )
             {
                 BufferedReader brd = new BufferedReader(frd);
@@ -125,20 +130,33 @@ class ESReaderParseThread extends Thread
                     // Format: <lemma>===List of <word>
                     String[] lemmaPlusList = line.split("===");
 
-                    String lemma = lemmaPlusList[0];
-                    String[] words = lemmaPlusList[1].split(";");
+                    //... Lemma table
+                    int lemmid = 0;
+                    String lemma = lemmaPlusList[0].replace("'", "\\'");        // Escape single quote
 
-                    // Lemma table
-                    lem.setString(1, lemma);
-                    lem.executeUpdate();
-                    PreparedStatement lid = conn.prepareStatement("select id from lemma.Lemma where lemma = '"+lemma+"'");
+                    // Get the lemma id, else write lemma and then get id
+                    lid.setString(1, lemma);
                     ResultSet rs = lid.executeQuery();
-                    rs.next();
-                    int lemmid = rs.getInt("id");
 
-                    // Word table
-                    for( String w: words )
+                    if( rs.next() )
+                        lemmid = rs.getInt("id");
+                    else
                     {
+                        // Write
+                        lem.setString(1, lemma);
+                        lem.executeUpdate();
+                        // And get the id (string set above)
+                        rs = lid.executeQuery();
+                        rs.next();
+                        lemmid = rs.getInt("id");
+                    }
+
+                    //... Word table
+                    for( String w: lemmaPlusList[1].split(";") )
+                    {
+                        // Word
+                        w = w.replace("'", "\\'");                              // Ensure single quote escaped
+                        
                         // Store on Word table
                         wrd.setString(Constants.WORD, w);
                         wrd.setString(Constants.LANGID, d.getLangCode().toString());
@@ -152,11 +170,13 @@ class ESReaderParseThread extends Thread
             }
             catch( SQLException sqx )
             {
+                System.out.println("!!!ERR(sqx) line: [" +line+ "]");
                 sqx.printStackTrace();
                 System.exit(-8);
             }
             catch( IOException iox )
             {
+                System.out.println("!!!ERR(iox) line: [" +line+ "]");
                 iox.printStackTrace();
                 System.exit(-2);
             }
