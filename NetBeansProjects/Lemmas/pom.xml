@@ -22,5 +22,10 @@
             <artifactId>PrediktApp1</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>LouvainCluster</artifactId>
+            <version>${project.version}</version>
+        </dependency>
     </dependencies>
 </project>

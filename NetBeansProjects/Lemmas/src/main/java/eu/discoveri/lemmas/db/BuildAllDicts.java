@@ -14,7 +14,8 @@ import java.time.format.DateTimeFormatter;
 
 
 /**
- *
+ * Build all the lemma "dictionaries".  (Assume ~5 hours per dictionary)
+ * 
  * @author Chris Powell, Discoveri OU
  * @email info@astrology.ninja
  */
@@ -29,9 +30,9 @@ public class BuildAllDicts
         try( Connection conn = LemmaDbBuild.lemmaDb() )
         {
             // English
-//            System.out.println(LocalDateTime.now().format(df)+"> Building EN...");
-//            BuildENdict bend = new BuildENdict();
-//            bend.lineReaderParseParallel(1, 1, conn);
+            System.out.println(LocalDateTime.now().format(df)+"> Building EN...");
+            BuildENdict bend = new BuildENdict();
+            bend.lineReaderParseParallel(1, 1, conn);
             
             // Spanish
             System.out.println(LocalDateTime.now().format(df)+"> Building ES...");

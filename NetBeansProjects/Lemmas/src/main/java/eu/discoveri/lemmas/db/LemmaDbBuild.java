@@ -72,7 +72,10 @@ import java.sql.PreparedStatement;
 
 
 /**
- *
+ * Create base set of tables of lemma database (Word->Lemma).
+ * Tables: langCode, PennPOSCode, Lemma (with null entry), (Wiki)Page with zero
+ * entry, Word table (empty) [see above].
+ * 
  * @author Chris Powell, Discoveri OU
  * @email info@astrology.ninja
  */
@@ -223,11 +226,10 @@ public class LemmaDbBuild
     public static void main(String[] args)
             throws Exception
     {
-        // Setup Db connection
+        // Start
         LemmaDbBuild lemmaBld = new LemmaDbBuild();
-        LemmaDbBuild.lemmaDb();
         
-        // Db commection
+        // Db connection
         Connection conn = lemmaDb();
         
         // LangCode, POStags, Null lemma

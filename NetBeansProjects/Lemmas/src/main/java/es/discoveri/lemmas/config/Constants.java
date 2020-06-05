@@ -24,5 +24,5 @@ public class Constants
     public static String        PAGEPS = "";
     public static String        LEMMA4WORDPS = "select id from lemma.Lemma where lemma = ?";
     public static String        LEMMANULLPS = "insert into lemma.Lemma values(default,?)";
-    public static String        PAGEZEROPS = "insert into lemma.Page values(default,?,?)";       
+    public static String        PAGEZEROPS = "insert into lemma.Page values(default,?,?)";
 }

@@ -6,6 +6,8 @@
 package eu.discoveri.lemmas;
 
 import eu.discoveri.lemmas.db.LemmaDbBuild;
+import eu.discoveri.louvaincluster.Clusters;
+import eu.discoveri.predikt.config.Constants;
 import eu.discoveri.predikt.config.EnSetup;
 import eu.discoveri.predikt.graph.Corpi;
 import eu.discoveri.predikt.graph.DiscoveriSessionFactory;
@@ -14,10 +16,15 @@ import eu.discoveri.predikt.graph.SentenceEdge;
 import eu.discoveri.predikt.graph.SentenceEdgeService;
 import eu.discoveri.predikt.graph.SentenceNode;
 import eu.discoveri.predikt.graph.SentenceNodeService;
+import eu.discoveri.predikt.graph.Vertex;
 import eu.discoveri.predikt.sentences.CorpusProcess;
 
 import java.sql.Connection;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+
 import org.neo4j.ogm.session.Session;
 
 
@@ -28,6 +35,9 @@ import org.neo4j.ogm.session.Session;
  */
 public class LTest
 {
+    static long idx = -1;
+    static int  eIdx = -1;
+    
     public static void main(String[] args)
             throws Exception
     {
@@ -44,6 +54,8 @@ public class LTest
          * Process sentences
          * -----------------
          */
+        // Edges
+        List<SentenceEdge> ledges = new ArrayList<>();
         // Get sentences from raw text
         List<SentenceNode> lsents = Corpi.getVertices();
         
@@ -79,15 +91,52 @@ public class LTest
 
         // Clear database
         sess.purgeDatabase();
-        
-        // Nodes
-        lsents.forEach(s -> s.persist(sns));
 
         // Edges
         cp.getQRscores().forEach((k,v) -> {
-            SentenceEdge se = new SentenceEdge(k.getKey(),k.getValue(),v);
-            se.persist(ses);
+//            System.out.println("-----> Weight edge ["+k.getKey()+"]-["+k.getValue()+"]: " +v);
+            if( v > Constants.EDGEWEIGHTMIN )
+            {
+                SentenceEdge se = new SentenceEdge(k.getKey(),k.getValue(),v);
+                ledges.add(se);
+                se.persist(ses);
+            }
         });
+        
+        // Dump nodes/edges for cluster analysis
+        Map<Vertex,Long> vi = new HashMap<>();
+        System.out.println("Num. nodes: " +lsents.size()+ ", num. edges: " +ledges.size());
+        ledges.forEach(e -> {
+            Vertex v1 = e.getN1();
+            if( !vi.containsKey(v1) )
+            {
+                vi.put(v1, ++idx);
+                v1.setLouvainIdx(idx);
+            }
+
+            Vertex v2 = e.getN2();
+            if( !vi.containsKey(v2) )
+            {
+                vi.put(v2, ++idx);
+                e.getN2().setLouvainIdx(idx);
+            }
+        });
+        
+        // Edge and edge weights
+        double[] edgeWeights = new double[ledges.size()];
+        int[][] edges = new int[2][ledges.size()];
+        ledges.forEach(e -> {
+            System.out.println(""+e.getN1().getLouvainIdx()+"\t"+e.getN2().getLouvainIdx()+"\t"+e.getWeight());
+            edgeWeights[++eIdx] = e.getWeight();
+            edges[0][eIdx] = (int)e.getN1().getLouvainIdx();
+            edges[1][eIdx] = (int)e.getN2().getLouvainIdx();
+        });
+        
+        // Nodes, update Louvain index
+        lsents.forEach(s -> s.persist(sns));
+        
+        // Clustering
+        Clusters.generate(lsents.size(), edges, edgeWeights);
         
         // Close
         System.out.println("");
