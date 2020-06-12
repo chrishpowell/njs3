@@ -5,8 +5,9 @@
  */
 package eu.discoveri.lemmas;
 
-import es.discoveri.lemmas.config.Constants;
+import eu.discoveri.predikt.config.Constants;
 import eu.discoveri.predikt.graph.SentenceNode;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;

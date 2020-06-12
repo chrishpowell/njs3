@@ -62,7 +62,7 @@ create table Page
 //</editor-fold>
 package eu.discoveri.lemmas.db;
 
-import es.discoveri.lemmas.config.Constants;
+import eu.discoveri.predikt.config.Constants;
 import eu.discoveri.lemmas.LangCode;
 import eu.discoveri.lemmas.PennPOSCode;
 

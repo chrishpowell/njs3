@@ -5,7 +5,7 @@
  */
 package eu.discoveri.lemmas;
 
-import es.discoveri.lemmas.config.Constants;
+import eu.discoveri.predikt.config.Constants;
 import eu.discoveri.lemmas.db.DictType;
 
 import java.io.BufferedReader;
