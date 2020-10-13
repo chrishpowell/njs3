@@ -47,7 +47,7 @@
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
-            <version>4.12</version>
+            <version>4.13.1</version>
             <scope>test</scope>
         </dependency>
         <!-- https://search.maven.org/artifact/org.quartz-scheduler/quartz/2.3.0/jar -->
